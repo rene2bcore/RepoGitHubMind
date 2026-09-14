@@ -45,7 +45,7 @@ pnpm openapi:generate           # escribe docs/api/openapi.json desde los esquem
 pnpm openapi:check              # sale 1 si el fichero ya no es el contrato generado. No arregla nada
 ```
 
-Hoy hay **67 pruebas** en el monorepo: 30 en web, 6 en worker y 31 en packages. **Este es el único sitio que da el número**, y CI lo contrasta con lo que ejecuta Vitest (`scripts/recuento-pruebas.mjs`): al añadir una prueba, se actualiza aquí, total y desglose.
+Hoy hay **69 pruebas** en el monorepo: 31 en web, 6 en worker y 32 en packages. **Este es el único sitio que da el número**, y CI lo contrasta con lo que ejecuta Vitest (`scripts/recuento-pruebas.mjs`): al añadir una prueba, se actualiza aquí, total y desglose.
 
 Las pruebas de navegador (Playwright, `apps/web/e2e/*.e2e.ts`) levantan `web` en el puerto 3001 contra la base de pruebas, nunca la de desarrollo, y la vacían al arrancar. Cubren pocos casos a propósito: el flujo principal entero desde la pantalla de registro y lo que ninguna otra capa ve.
 
