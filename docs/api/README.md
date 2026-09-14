@@ -15,6 +15,7 @@ CI ejecuta la comparación en cada push. Un rojo ahí significa que alguien camb
 
 - Las Server Actions: no son HTTP público. Se documentan en `docs/capabilities/`.
 - Las páginas: `/login`, `/register`, `/library`, `/search` son HTML, no API.
+- `GET /api/health` y `GET /api/health/ready`: son de la infraestructura (healthcheck del contenedor, Cloudflare y el script de despliegue), no del producto. Públicas, sin datos. Ver [`deployment-hostinger.md`](../deployment-hostinger.md).
 
 ## Lo que un generador no puede afirmar
 

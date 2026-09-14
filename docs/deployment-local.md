@@ -1,6 +1,6 @@
 # Despliegue local y demo por Cloudflare Tunnel
 
-> **No ejecutado nunca** a 2026-09-14: no hay código ([H-01](hallazgos.md)). Lo que sigue es lo que el diseño exige ([prompt maestro](prompts/00-prompt-maestro.md) §46, §47, §49). Quien lo ejecute por primera vez lo convierte en procedimiento y lo fecha aquí.
+> Desarrollo verificado a 2026-09-14 (Entrega 2). La demo por túnel desde esta máquina no se ha ejecutado: la Entrega final se publica desde el VPS ([`deployment-hostinger.md`](deployment-hostinger.md)). Lo que sigue sobre el túnel es lo que el diseño exige ([prompt maestro](prompts/00-prompt-maestro.md) §46, §47, §49).
 
 ## Desarrollo
 
@@ -15,14 +15,9 @@ pnpm db:seed
 pnpm dev                                               # web en http://localhost:3000 y worker (pnpm dev:web / dev:worker por separado)
 ```
 
-Todo en contenedores:
+Todo en contenedores, como en producción: [`deployment-hostinger.md`](deployment-hostinger.md) § «Probar el stack de producción en local».
 
-```bash
-docker compose -f docker/docker-compose.yml up -d      # postgres, web y worker
-docker compose -f docker/docker-compose.yml logs -f worker
-```
-
-`docker/docker-compose.yml` crea dos bases en el mismo `postgres`: `repogithubmind` y `repogithubmind_test`. La suite usa la segunda por construcción ([ADR-0003](adr/0003-aislamiento-de-la-base-de-datos-en-pruebas.md)).
+`docker/docker-compose.yml` (desarrollo) solo levanta `postgres` y crea dos bases: `repogithubmind` y `repogithubmind_test`. La suite usa la segunda por construcción ([ADR-0003](adr/0003-aislamiento-de-la-base-de-datos-en-pruebas.md)).
 
 ## Demo R1: localhost expuesto por Cloudflare Tunnel
 

@@ -17,7 +17,7 @@ Monorepo con pnpm workspaces, decidido en [`docs/architecture.md`](docs/architec
 - `apps/web/` · Next.js (App Router) + React + TypeScript strict + Tailwind. UI, sesión propia con cookie `rgm_session` ([ADR-0013](docs/adr/0013-sesion-propia-en-vez-de-authjs.md)), Route Handlers bajo `/api/v1` y Server Actions. Puerto `3000`. Los `components/ui/` están escritos a mano hasta que entre shadcn ([H-04](docs/hallazgos.md))
 - `apps/worker/` · Proceso Node que consume la cola de trabajos en PostgreSQL: fetch de GitHub, análisis IA, embeddings, refresh
 - `packages/db/` · Esquema Drizzle, migraciones y seeds. `packages/github/` · `GitHubProvider` sobre la REST API. `packages/ai/` · `AIProvider` y `AIProviderRegistry`. `packages/search/` · búsqueda híbrida. `packages/shared/` · tipos, errores tipados, esquemas Zod. `packages/config/` · eslint, prettier, tsconfig compartidos
-- `docker/` · `docker-compose.yml` con `postgres` (pgvector), `web` y `worker`
+- `docker/` · `docker-compose.yml` de desarrollo (solo `postgres` con las dos bases); `docker-compose.prod.yml`, `Dockerfile.web` y `Dockerfile.worker` para el VPS ([`docs/deployment-hostinger.md`](docs/deployment-hostinger.md))
 - `docs/` · producto, arquitectura, specs, trazabilidad, decisiones, runbooks, hallazgos
 - `scripts/` · lo que CI ejecuta y también sirve en local
 
@@ -43,9 +43,18 @@ pnpm format:check               # lo que corre CI: sale 1 si algo no está forma
 pnpm audit --audit-level=high   # lo que corre CI
 pnpm openapi:generate           # escribe docs/api/openapi.json desde los esquemas Zod de los Route Handlers
 pnpm openapi:check              # sale 1 si el fichero ya no es el contrato generado. No arregla nada
+pnpm --filter web build         # build de producción (standalone), el que usa docker/Dockerfile.web
 ```
 
-Hoy hay **81 pruebas** en el monorepo: 43 en web, 6 en worker y 32 en packages. **Este es el único sitio que da el número**, y CI lo contrasta con lo que ejecuta Vitest (`scripts/recuento-pruebas.mjs`): al añadir una prueba, se actualiza aquí, total y desglose.
+El stack de producción en local, igual que en el VPS y en el job `imagenes` de CI:
+
+```bash
+cp docker/.env.example docker/.env   # POSTGRES_PASSWORD, AUTH_SECRET, AUTH_URL=http://localhost:3000, TRUST_PROXY=false
+docker compose -f docker/docker-compose.prod.yml --env-file docker/.env up -d --build --wait postgres web worker
+curl -fsS http://localhost:3000/api/health/ready
+```
+
+Hoy hay **85 pruebas** en el monorepo: 45 en web, 6 en worker y 34 en packages. **Este es el único sitio que da el número**, y CI lo contrasta con lo que ejecuta Vitest (`scripts/recuento-pruebas.mjs`): al añadir una prueba, se actualiza aquí, total y desglose.
 
 Las pruebas de navegador (Playwright, `apps/web/e2e/*.e2e.ts`) levantan `web` en el puerto 3001 contra la base de pruebas, nunca la de desarrollo, y la vacían al arrancar. Cubren pocos casos a propósito: el flujo principal entero desde la pantalla de registro y lo que ninguna otra capa ve.
 
