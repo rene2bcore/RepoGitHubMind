@@ -1,5 +1,7 @@
+import Link from 'next/link'
 import type { UserRepository } from '@rgm/shared'
 import { Card } from '@/components/ui/card'
+import { PersonalControls } from '@/components/personal-controls'
 
 /** 19400 -> «19,4k», 980 -> «980», 120500 -> «121k». */
 export function formatStars(n: number): string {
@@ -34,7 +36,7 @@ export const STATUS_LABELS: Record<UserRepository['personal']['status'], string>
   ARCHIVED: 'Archivado',
 }
 
-const ANALYSIS_LABELS = {
+export const ANALYSIS_LABELS = {
   PENDING: 'Resumen de IA en camino',
   COMPLETED: null,
   FAILED: 'La IA no pudo resumirlo',
@@ -45,7 +47,8 @@ const ANALYSIS_LABELS = {
  * Tarjeta compacta (specs/library · «Tarjeta compacta»), en este orden:
  * nombre, resumen o descripción, `⭐ · licencia · lenguaje`, categorías,
  * última actividad y estado personal. El resumen de IA sustituye a la
- * descripción cuando existe; mientras no, la tarjeta lo dice.
+ * descripción cuando existe; mientras no, la tarjeta lo dice. El estado y
+ * el favorito se cambian desde aquí, sin abrir el detalle.
  */
 export function RepositoryCard({ item }: { item: UserRepository }) {
   const { repository: r, personal } = item
@@ -53,17 +56,17 @@ export function RepositoryCard({ item }: { item: UserRepository }) {
   return (
     <Card className="flex flex-col gap-2 p-4" data-testid="repository-card">
       <div className="flex items-start justify-between gap-2">
-        <a
-          href={r.url}
-          target="_blank"
-          rel="noreferrer noopener"
-          className="font-medium break-all hover:underline"
-        >
+        <Link href={`/repositories/${item.id}`} className="font-medium break-all hover:underline">
           {r.owner} / {r.name}
-        </a>
-        <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-xs text-muted">
-          {STATUS_LABELS[personal.status]}
-        </span>
+        </Link>
+        {personal.rating ? (
+          <span
+            className="shrink-0 text-xs text-muted"
+            aria-label={`Rating ${personal.rating} de 5`}
+          >
+            {'★'.repeat(personal.rating)}
+          </span>
+        ) : null}
       </div>
       <p className="text-sm text-muted">
         {r.analysis.summary ?? r.description ?? 'Sin descripción en GitHub'}
@@ -87,6 +90,7 @@ export function RepositoryCard({ item }: { item: UserRepository }) {
         {analysisNote ? <span> · {analysisNote}</span> : null}
         {r.archived ? <span> · Archivado en GitHub</span> : null}
       </p>
+      <PersonalControls id={item.id} personal={personal} />
     </Card>
   )
 }
