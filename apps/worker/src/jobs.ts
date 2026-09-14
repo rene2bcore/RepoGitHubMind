@@ -1,5 +1,6 @@
 import { claimJob, completeJob, failJob, type Job } from '@rgm/db'
 import { analyzeRepositoryJob } from './analyze'
+import { generateEmbeddingJob } from './embed'
 
 export type JobResult = { job: Job; outcome: 'completed' | 'requeued' | 'failed' }
 
@@ -12,6 +13,7 @@ type Handler = (job: Job) => Promise<unknown>
  */
 const handlers: Record<string, Handler> = {
   ANALYZE_REPOSITORY: (job) => analyzeRepositoryJob(job),
+  GENERATE_EMBEDDING: (job) => generateEmbeddingJob(job),
 }
 
 /**
