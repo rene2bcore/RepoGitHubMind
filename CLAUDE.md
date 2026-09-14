@@ -12,9 +12,9 @@ El repositorio es también el registro de **cómo** se construye: PRD y specs, t
 
 ### Estructura
 
-Monorepo con pnpm workspaces. **Hasta la Entrega 2 no hay código**: la estructura de abajo es la decidida en [`docs/architecture.md`](docs/architecture.md) y se crea con la primera historia. Está registrado en [H-01](docs/hallazgos.md).
+Monorepo con pnpm workspaces, decidido en [`docs/architecture.md`](docs/architecture.md). Con H1 (Entrega 2) existen `apps/web`, `packages/shared`, `packages/db` y `packages/config`; `apps/worker` y `packages/github` llegan con H2, `packages/ai` con H4 y `packages/search` con H5.
 
-- `apps/web/` · Next.js (App Router) + React + TypeScript strict + Tailwind + shadcn/ui. UI, Auth.js, Route Handlers bajo `/api/v1` y Server Actions. Puerto `3000`
+- `apps/web/` · Next.js (App Router) + React + TypeScript strict + Tailwind. UI, sesión propia con cookie `rgm_session` ([ADR-0013](docs/adr/0013-sesion-propia-en-vez-de-authjs.md)), Route Handlers bajo `/api/v1` y Server Actions. Puerto `3000`. Los `components/ui/` están escritos a mano hasta que entre shadcn ([H-04](docs/hallazgos.md))
 - `apps/worker/` · Proceso Node que consume la cola de trabajos en PostgreSQL: fetch de GitHub, análisis IA, embeddings, refresh
 - `packages/db/` · Esquema Drizzle, migraciones y seeds. `packages/github/` · `GitHubProvider` sobre la REST API. `packages/ai/` · `AIProvider` y `AIProviderRegistry`. `packages/search/` · búsqueda híbrida. `packages/shared/` · tipos, errores tipados, esquemas Zod. `packages/config/` · eslint, prettier, tsconfig compartidos
 - `docker/` · `docker-compose.yml` con `postgres` (pgvector), `web` y `worker`
@@ -25,15 +25,15 @@ Las ramas de entrega del fork llevan las iniciales que LIDR exige: `feature/entr
 
 ## Comandos
 
-Todos desde la raíz del monorepo. Los `package.json` llegan con la Entrega 2; los nombres de los scripts son los que CI y este fichero ya usan, así que se crean con estos nombres exactos.
+Todos desde la raíz del monorepo. PostgreSQL se publica en el puerto **5434** del host (`docker/docker-compose.yml`), porque 5432 y 5433 suelen estar ocupados por otros contenedores ([H-05](docs/hallazgos.md)); las URLs de `.env.example` y `.env.test` ya lo llevan.
 
 ```bash
 pnpm install --frozen-lockfile
-docker compose -f docker/docker-compose.yml up -d postgres   # PostgreSQL 16 con pgvector
+docker compose -f docker/docker-compose.yml up -d postgres   # PostgreSQL 16 con pgvector, en localhost:5434, con las dos bases
 cp .env.example .env
 pnpm db:migrate                 # migraciones de Drizzle
-pnpm db:seed                    # taxonomía, usuario de desarrollo y repositorios de ejemplo
-pnpm dev                        # web en :3000 y worker a la vez
+pnpm db:seed                    # usuario de desarrollo (taxonomía y ejemplos llegan con H4)
+pnpm dev                        # web en :3000 (el worker se suma con H2)
 pnpm test                       # Vitest en todo el workspace
 pnpm test:e2e                   # Playwright, en apps/web; la primera vez: pnpm --filter web exec playwright install chromium
 pnpm lint                       # eslint
@@ -45,9 +45,9 @@ pnpm openapi:generate           # escribe docs/api/openapi.json desde los esquem
 pnpm openapi:check              # sale 1 si el fichero ya no es el contrato generado. No arregla nada
 ```
 
-Hoy hay **0 pruebas** en el monorepo: 0 en web, 0 en worker y 0 en packages. **Este es el único sitio que da el número**, y CI lo contrasta con lo que ejecuta Vitest (`scripts/recuento-pruebas.mjs`): al añadir una prueba, se actualiza aquí, total y desglose.
+Hoy hay **43 pruebas** en el monorepo: 18 en web, 0 en worker y 25 en packages. **Este es el único sitio que da el número**, y CI lo contrasta con lo que ejecuta Vitest (`scripts/recuento-pruebas.mjs`): al añadir una prueba, se actualiza aquí, total y desglose.
 
-Las pruebas de navegador (Playwright, `apps/web/e2e/*.e2e.ts`) levantan `web` y `worker` contra la base de pruebas, nunca la de desarrollo, y deshacen las tablas al terminar. Cubren pocos casos a propósito: el flujo principal entero desde la pantalla de registro y lo que ninguna otra capa ve.
+Las pruebas de navegador (Playwright, `apps/web/e2e/*.e2e.ts`) levantan `web` en el puerto 3001 contra la base de pruebas, nunca la de desarrollo, y la vacían al arrancar. Cubren pocos casos a propósito: el flujo principal entero desde la pantalla de registro y lo que ninguna otra capa ve.
 
 Desde la raíz, sin dependencias instaladas:
 
@@ -63,16 +63,14 @@ Monolito modular en Next.js con un worker aparte y PostgreSQL + pgvector como ú
 
 ### Rutas
 
-Route Handlers bajo `/api/v1`. `scripts/verificar-docs.mjs` contrasta esta tabla contra el contrato: una ruta aquí que no esté en `openapi.json`, o al revés, pone CI en rojo. Las rutas de Auth.js (`/api/auth/*`) las gestiona la librería y no entran ni en la tabla ni en el contrato, a propósito. Las Server Actions tampoco: se documentan en `docs/capabilities/`.
+Route Handlers bajo `/api/v1`. `scripts/verificar-docs.mjs` contrasta esta tabla contra el contrato: una ruta aquí que no esté en `openapi.json`, o al revés, pone CI en rojo. Las de repositorios, biblioteca y búsqueda llegan con H2, H3 y H5 y entran aquí y en el contrato en el mismo commit que su código. Las Server Actions no van al contrato: se documentan en `docs/capabilities/`.
 
-| Método | Ruta | Auth |
-|---|---|---|
-| POST | `/api/v1/auth/register` | no |
-| POST | `/api/v1/repositories` | sí |
-| GET | `/api/v1/repositories` | sí |
-| GET | `/api/v1/repositories/:id` | sí |
-| PATCH | `/api/v1/repositories/:id/personal` | sí |
-| GET | `/api/v1/search` | sí |
+| Método | Ruta                    | Auth |
+| ------ | ----------------------- | ---- |
+| POST   | `/api/v1/auth/register` | no   |
+| POST   | `/api/v1/auth/login`    | no   |
+| POST   | `/api/v1/auth/logout`   | sí   |
+| GET    | `/api/v1/auth/me`       | sí   |
 
 ### El modelo conceptual que no se negocia
 
@@ -89,10 +87,11 @@ Route Handlers bajo `/api/v1`. `scripts/verificar-docs.mjs` contrasta esta tabla
 - **El volcado de depuración va apagado en todos los entornos** ([ADR-0004](docs/adr/0004-el-volcado-de-depuracion-va-apagado.md)): ningún error devuelve traza, SQL ni rutas del disco. Un 5xx responde `{ "errors": [{ "message": "Error interno del servidor" }] }`.
 - **Se valida la petición antes de resolver el identificador** ([ADR-0005](docs/adr/0005-validar-antes-de-resolver.md)): `422` antes que `404`.
 - **Apache-2.0 con copyright de 2BCORE** ([ADR-0011](docs/adr/0011-licencia-apache-2.md)).
+- **La sesión es propia mientras solo haya credenciales**: token opaco en `sessions`, cookie `rgm_session` HttpOnly, `getSessionUser(req)` como única fuente de identidad; Auth.js vuelve con OAuth en R2 ([ADR-0013](docs/adr/0013-sesion-propia-en-vez-de-authjs.md)).
 
 ## Seguridad que se comprueba
 
-Del §41 del prompt maestro, lo que tiene prueba o comprobación: cookies seguras y CSRF los da Auth.js; autorización siempre en el servidor desde la sesión; validación con Zod en formularios, Route Handlers, salidas de IA y variables de entorno; rate limiting en las rutas que llaman a GitHub y a la IA; el README de GitHub se renderiza como Markdown saneado, sin `script`, `iframe` ni HTML crudo; los `.txt` de importación se validan por tamaño y MIME y no se conservan; los tokens de GitHub y de IA viven solo en el servidor. Cada uno con su fila en `docs/traceability.md` cuando exista la prueba.
+Del §41 del prompt maestro, lo que tiene prueba o comprobación: cookie de sesión `HttpOnly`, `SameSite=Lax` y `Secure` bajo HTTPS, con mutaciones solo por JSON ([ADR-0013](docs/adr/0013-sesion-propia-en-vez-de-authjs.md)); autorización siempre en el servidor desde la sesión; validación con Zod en formularios, Route Handlers, salidas de IA y variables de entorno; rate limiting en las rutas que llaman a GitHub y a la IA; el README de GitHub se renderiza como Markdown saneado, sin `script`, `iframe` ni HTML crudo; los `.txt` de importación se validan por tamaño y MIME y no se conservan; los tokens de GitHub y de IA viven solo en el servidor. Cada uno con su fila en `docs/traceability.md` cuando exista la prueba.
 
 ## Documentación de código
 
@@ -107,35 +106,35 @@ TSDoc va donde el lector no puede deducirlo del código, y en ningún otro sitio
 
 ### Ciclo de trabajo
 
-- **La rama es por unidad de trabajo, no por petición** (R-01). · *Silencioso.*
+- **La rama es por unidad de trabajo, no por petición** (R-01). · _Silencioso._
   Antes de tocar código, mira en qué rama estás: si ya es una rama de trabajo, sigue en ella. Solo desde `main` se crea una nueva (`git switch -c feat/RGM-n-<slug>`). Nunca commitear directo en `main`: **lo impide `.githooks/pre-commit`**, activado con `git config core.hooksPath .githooks` o por el script `prepare` al instalar. Lo prueba `scripts/probar-hook-rama.mjs` en CI.
-- **El commit es por petición** (R-02). · *Ruidoso.*
+- **El commit es por petición** (R-02). · _Ruidoso._
   Al cerrar cada una, la skill `/commit`. Asunto convencional, `tipo(ámbito): qué`: lo exige `.githooks/commit-msg` y lo prueba `scripts/probar-hook-mensaje.mjs`.
-- **Un cambio que toque Route Handlers, esquemas Zod o serializadores cierra en el mismo commit con el contrato al día** (R-05). · *Silencioso.*
+- **Un cambio que toque Route Handlers, esquemas Zod o serializadores cierra en el mismo commit con el contrato al día** (R-05). · _Silencioso._
   `pnpm openapi:generate`, y CI pone la build en rojo si se olvida. También el README de la capability en `docs/capabilities/<nombre>/README.md`.
-- **`gh pr create` y el revisor adversarial van una sola vez, al terminar la unidad de trabajo** (R-03). · *Silencioso.*
+- **`gh pr create` y el revisor adversarial van una sola vez, al terminar la unidad de trabajo** (R-03). · _Silencioso._
   El PR lleva la plantilla entera, incluida «Lo que este PR NO arregla», y la clave `RGM-n`. El revisor corre solo en CI sobre cada push de una rama con PR abierto; su informe queda en el PR.
-- **Se verifica por código de salida, nunca por la última línea impresa** (R-06). · *Silencioso.*
+- **Se verifica por código de salida, nunca por la última línea impresa** (R-06). · _Silencioso._
   `pnpm test; echo $?`, no `pnpm test | tail -1`. **En los workflows lo comprueba el verificador**: todo `run:` con tubería declara `set -o pipefail`.
-- **Al cambiar de rama base, los hallazgos cruzan y se comprueban uno a uno** (R-07). · *Silencioso.*
+- **Al cambiar de rama base, los hallazgos cruzan y se comprueban uno a uno** (R-07). · _Silencioso._
   `docs/hallazgos.md` viaja con el proyecto. Lo primero en la rama nueva es `node scripts/mutaciones.mjs`: cada `NO APLICA` o `SOBREVIVE` es un arreglo que no cruzó. Procedimiento al final de `docs/hallazgos.md`.
-- **Cada historia empieza en Jira y termina en Jira** (R-15). · *Silencioso.*
+- **Cada historia empieza en Jira y termina en Jira** (R-15). · _Silencioso._
   La skill `/priority-ticket` trae el ticket `RGM-n` de mayor prioridad en «Por hacer», lo mueve a «En curso» al aprobar el plan y a «En revisión» al abrir el PR, con el enlace. Manda el repositorio: si el tablero y `docs/backlog/` se contradicen, se corrige el tablero.
 
 ### Calidad del cambio
 
-- **Un bug no se cierra sin reproducirlo, y deja una prueba detrás** (R-08). · *Silencioso.*
+- **Un bug no se cierra sin reproducirlo, y deja una prueba detrás** (R-08). · _Silencioso._
   Primero se reproduce en un entorno lo más parecido posible a como lo vive el usuario final. **La mitad «deja una prueba» la comprueba CI** (`scripts/fix-con-prueba.mjs`): un commit `fix:` que no toque una prueba pone la build en rojo. Si la prueba no puede ser un fichero, el mensaje lleva una línea `Sin-prueba: <motivo>`. Lo que no es un arreglo no va como `fix:`.
-- **Al índice se va por nombre** (R-09). · *Silencioso, auditable.*
+- **Al índice se va por nombre** (R-09). · _Silencioso, auditable._
   `git add <fichero>`, nunca `git add -A` ni `git add .`.
-- **Los hooks no se saltan** (R-10). · *Ruidoso.*
+- **Los hooks no se saltan** (R-10). · _Ruidoso._
   Nada de `--no-verify`. Si un hook falla, se investiga la causa.
-- **Todo atajo tomado por velocidad se escribe como deuda técnica** (R-11). · *Silencioso, y el que más decae.*
+- **Todo atajo tomado por velocidad se escribe como deuda técnica** (R-11). · _Silencioso, y el que más decae._
   Explícito, con su motivo, en el sitio donde alguien lo vaya a leer: `docs/hallazgos.md` para defectos, `Sin-prueba:` para arreglos sin prueba, el PR para lo que queda abierto.
-- **Un lint en rojo, un test que falla o uno flaky se arreglan aunque no los hayas causado** (R-12). · *Silencioso.*
-- **La documentación desactualizada es peor que no tenerla** (R-13). · *No se puede comprobar.*
+- **Un lint en rojo, un test que falla o uno flaky se arreglan aunque no los hayas causado** (R-12). · _Silencioso._
+- **La documentación desactualizada es peor que no tenerla** (R-13). · _No se puede comprobar._
   Se documenta cuando aporta valor y nunca como ritual. Ninguna comprobación sabe si un documento sigue siendo útil; solo si coincide con el código, que es lo que hace `scripts/verificar-docs.mjs`.
-- **Una comprobación cuenta cuando se la ha visto fallar** (R-14). · *Peor que silencioso: da una garantía que no existe.*
+- **Una comprobación cuenta cuando se la ha visto fallar** (R-14). · _Peor que silencioso: da una garantía que no existe._
   Toda comprobación que se añada, al verificador, a CI o a la suite, se demuestra **mutando el código a propósito** y viendo que se pone en rojo **por ese motivo**. **Lo ejecuta CI**: `scripts/mutaciones.mjs` reintroduce defectos que ya existieron y exige el rojo nombrando el motivo. **Al añadir una comprobación, se añade su entrada al catálogo.**
 
 ## Lo que no se hace
