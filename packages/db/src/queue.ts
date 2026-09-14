@@ -63,7 +63,9 @@ export async function completeJob(id: string, db: Database = getDb()): Promise<v
  * Un fallo vuelve a la cola con backoff exponencial (30 s, 60 s, 120 s…)
  * hasta agotar `max_attempts`; después queda `FAILED` con el último error.
  * Con `retryAfter` (por ejemplo, la ventana de rate limit de GitHub) se
- * respeta esa fecha en vez del backoff.
+ * respeta esa fecha en vez del backoff. Un error con `retryable: false` (una
+ * salida de IA que no validó dos veces, una clave rechazada) queda `FAILED`
+ * al primer intento: repetirlo daría lo mismo y costaría otra vez.
  */
 export async function failJob(
   job: Pick<Job, 'id' | 'attempts' | 'maxAttempts'>,
@@ -72,7 +74,11 @@ export async function failJob(
   db: Database = getDb(),
 ): Promise<'requeued' | 'failed'> {
   const message = error instanceof Error ? error.message : String(error)
-  const exhausted = job.attempts >= job.maxAttempts
+  const permanent =
+    error instanceof Error &&
+    'retryable' in error &&
+    (error as { retryable: unknown }).retryable === false
+  const exhausted = permanent || job.attempts >= job.maxAttempts
   const backoffMs = 30_000 * 2 ** Math.max(0, job.attempts - 1)
   const runAfter = retryAfter ?? new Date(Date.now() + backoffMs)
   await db

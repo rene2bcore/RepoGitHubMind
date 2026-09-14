@@ -11,14 +11,14 @@ import {
 } from '@rgm/db'
 import { truncateAllTables } from '@rgm/db/migrate'
 import { FIXTURES } from '@rgm/github'
-import { resetEnvCache } from '@rgm/shared'
 import { processNextJob, setHandler } from '../src/jobs'
 
 /**
  * ADR-0010 · Cola de trabajos en PostgreSQL: encolar es idempotente, un
- * fallo vuelve con backoff, agotar intentos deja FAILED, y una ventana de
- * reintento se respeta. specs/repositories · «La IA falla»: con la IA apagada
- * el análisis queda DISABLED y el repositorio sigue usable.
+ * fallo vuelve con backoff, agotar intentos o un error no reintentable deja
+ * FAILED, y una ventana de reintento se respeta. specs/repositories · «La IA
+ * falla»: con la IA apagada el análisis queda DISABLED y el repositorio sigue
+ * usable. El análisis con proveedor está en `analisis.test.ts`.
  */
 describe('cola de trabajos', () => {
   let repositoryId: string
@@ -61,22 +61,20 @@ describe('cola de trabajos', () => {
     expect(await enqueueJob('ANALYZE_REPOSITORY', repositoryId)).toEqual({ enqueued: true })
   })
 
-  it('con la IA activa y sin proveedor, el análisis queda FAILED con motivo (hasta H4)', async () => {
-    Object.assign(process.env, { AI_ANALYSIS_ENABLED: 'true' })
-    resetEnvCache()
-    try {
-      await enqueueJob('ANALYZE_REPOSITORY', repositoryId)
-      expect((await processNextJob())?.outcome).toBe('completed')
-      const [analysis] = await getDb()
-        .select()
-        .from(repositoryAnalyses)
-        .where(eq(repositoryAnalyses.repositoryId, repositoryId))
-      expect(analysis?.status).toBe('FAILED')
-      expect(analysis?.lastError).toMatch(/H4/)
-    } finally {
-      Object.assign(process.env, { AI_ANALYSIS_ENABLED: 'false' })
-      resetEnvCache()
-    }
+  it('un error que se declara no reintentable queda FAILED al primer intento, sin volver a la cola', async () => {
+    setHandler('PRUEBA', async () => {
+      throw Object.assign(new Error('la salida no validó dos veces'), { retryable: false })
+    })
+    await getDb()
+      .insert(backgroundJobs)
+      .values({ type: 'PRUEBA' as never, repositoryId })
+    expect((await processNextJob())?.outcome).toBe('failed')
+    const [job] = await getDb().select().from(backgroundJobs)
+    expect(job).toMatchObject({
+      status: 'FAILED',
+      attempts: 1,
+      lastError: 'la salida no validó dos veces',
+    })
   })
 
   it('un fallo vuelve a la cola con run_after en el futuro, y al agotar intentos queda FAILED', async () => {
