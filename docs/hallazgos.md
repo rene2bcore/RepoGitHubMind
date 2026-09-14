@@ -28,7 +28,7 @@ La severidad no se escribe: es un criterio que quien escribe inventa. El orden e
 | H-01 | CI no puede ejecutar lint, tipos, pruebas ni contrato hasta que exista código          | Resuelto · `feat/RGM-2-cuentas-y-sesion` 2026-09-14     |
 | H-02 | El hook de formato del harness rompía toda escritura al llegar con placeholders        | Resuelto · `main` 2026-09-14                            |
 | H-03 | El merge de historias entre producto y fork pisaría `readme.md` en Windows             | Resuelto · ADR-0012, 2026-09-14                         |
-| H-04 | Los componentes de `components/ui/` están escritos a mano, no traídos con `shadcn add` | Deuda aceptada, con fecha de cierre: H3 (RGM-4)         |
+| H-04 | Los componentes de `components/ui/` están escritos a mano, no traídos con `shadcn add` | Deuda aceptada, con fecha de cierre: Entrega final      |
 | H-05 | Los puertos 5432 y 5433 del host ya estaban ocupados por otros contenedores            | Resuelto · `feat/RGM-2-cuentas-y-sesion` 2026-09-14     |
 | H-06 | Drizzle envuelve el error del driver y el código SQLSTATE no está en el nivel superior | Resuelto · `feat/RGM-2-cuentas-y-sesion` 2026-09-14     |
 | H-07 | El rate limit se evadía rotando `x-forwarded-for`, que cualquiera escribe              | Resuelto · `fix/RGM-2-rate-limit-por-cuenta` 2026-09-14 |
@@ -113,7 +113,7 @@ La Definition of Done de RGM-11 pide `components/ui/` traídos con `shadcn add` 
 
 **Daño:** el detalle del repositorio (H3) necesitará `badge`, `select`, `textarea` y `dialog`, y escribirlos a mano cuesta más que traerlos · **Radio:** 3 sitios: `apps/web/src/components/ui/button.tsx`, `apps/web/src/components/ui/input.tsx`, `apps/web/src/components/ui/card.tsx` · **Reversibilidad:** sí: `shadcn init` y `shadcn add` sustituyen los tres sin tocar a quien los usa · **Precedencia:** abarata H3
 
-**Estado:** Deuda aceptada con fecha de cierre: RGM-4 (H3), que es la primera historia que necesita más componentes.
+**Estado:** Deuda aceptada. RGM-4 (H3) se construyó con `select`, `textarea` y botones nativos estilizados en vez de traer shadcn, para no mezclar la migración de la interfaz con la historia; se cierra en la Entrega final, antes de H4.
 
 **Qué lo vigila:** la casilla de RGM-11 en `docs/backlog/RGM-2-cuentas-y-sesion.md`, que queda sin marcar hasta que exista `apps/web/components.json`.
 

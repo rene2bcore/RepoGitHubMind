@@ -61,6 +61,15 @@
 - **Resultado:** migración `0001` con cuatro tablas; `packages/github` con 6 pruebas unitarias del proveedor real (fetch grabado: cabeceras, token, 404, 403 y 429 con ventana); `packages/db/src/queue.ts` y `apps/worker` con 6 pruebas de la cola; `POST` y `GET /api/v1/repositories` con 11 pruebas de integración; la biblioteca con el campo de URL y las tarjetas; el E2E guarda, repite y rechaza; mutación `repositorio-unico`; 67 pruebas.
 - **Ajuste humano:** se decidió la tabla propia frente a `pg-boss` (ADR-0010, anotado con fecha). La revisión adversarial del PR de H1 encontró un grave real (el rate limit se evadía rotando `x-forwarded-for`, H-07) que se arregló en su propio PR antes de seguir, y el mismo criterio se aplicó a la ruta de guardar: límite por cuenta. Un `ORDER BY ... NULLS LAST DESC` mal compuesto y una prueba que reutilizaba un repositorio ya creado salieron en rojo antes del primer commit.
 
+### P-04 · Implementación de H3, mi biblioteca (RGM-4)
+
+- **Fecha:** 2026-09-14
+- **Herramienta y modelo:** Claude Code, claude-fable-5-1
+- **Objetivo:** cerrar la vertical de la Entrega 2 sobre H2: detalle, estado, favorito, rating y notas privados, filtros en la URL, README saneado, y la frontera privado/público probada con dos cuentas y en el catálogo de mutaciones.
+- **Prompt:** continuación de la sesión tras abrir el PR de H2, con `RGM-4` en «En curso». Entrada: `docs/backlog/RGM-4-mi-biblioteca.md` y `docs/specs/library/spec.md`.
+- **Resultado:** `GET /{id}` y `PATCH /{id}/personal` con validación antes de resolver el id; tarjeta con estado y favorito optimistas; filtros y orden en la URL; detalle con métricas, mis datos y README saneado; 10 pruebas de integración con dos cuentas, 2 del README hostil sin navegador, E2E con una segunda cuenta que no ve nada de la primera; mutación `flujo-principal` que muerde en Vitest y en Playwright; 79 pruebas.
+- **Ajuste humano:** `react-markdown` y `remark-gfm` se comprobaron en el registro de npm antes de instalarlos. El componente del README se escribió sin JSX para que la prueba unitaria lo renderice con `react-dom/server`: Next exige `jsx: preserve` en el tsconfig de la web y Vitest 4 no lo transforma. Un `notFound()` sin `try/catch` habría convertido un 404 en 500 en la página del detalle; se atrapa `NotFoundError` explícitamente. H-04 (shadcn) se pospuso a la Entrega final a propósito, para no mezclar la migración de la interfaz con la historia.
+
 ## Workflows
 
 | Workflow               | Cuándo                                  | Qué hace                                                                                                                            |
