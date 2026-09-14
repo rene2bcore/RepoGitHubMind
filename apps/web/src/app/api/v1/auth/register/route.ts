@@ -8,6 +8,7 @@ import { registerUser } from '@/modules/auth/service'
 export const POST = handle(async (req) => {
   checkRateLimit(`register:${clientAddress(req)}`)
   const body = await parseBody(req, registerSchema)
+  checkRateLimit(`register:cuenta:${body.email}`)
   const user = await registerUser(body)
   const { cookie } = await createSession(user.id)
   return Response.json({ data: user }, { status: 201, headers: { 'Set-Cookie': cookie } })

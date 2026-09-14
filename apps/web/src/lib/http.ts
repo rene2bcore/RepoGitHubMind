@@ -62,11 +62,18 @@ export function parseQuery<S extends z.ZodType>(req: Request, schema: S): z.outp
   return result.data
 }
 
-/** La dirección de quien pide, para el rate limiting. Detrás de Cloudflare llega en la cabecera. */
+/**
+ * La dirección de quien pide, para el rate limiting. Las cabeceras
+ * `cf-connecting-ip` y `x-forwarded-for` las escribe quien quiera si no hay
+ * un proxy propio delante que las sobrescriba; por eso solo se leen con
+ * `TRUST_PROXY=true` (H-07). Sin proxy, todas las peticiones comparten
+ * clave: un Route Handler de Next no ve la dirección del socket.
+ */
 export function clientAddress(req: Request): string {
+  if (!readEnv().TRUST_PROXY) return 'sin-proxy'
   return (
     req.headers.get('cf-connecting-ip') ??
     req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-    '127.0.0.1'
+    'sin-proxy'
   )
 }
