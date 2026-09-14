@@ -1,0 +1,25 @@
+{
+  "name": "worker",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@rgm/db": "workspace:*",
+    "@rgm/github": "workspace:*",
+    "@rgm/shared": "workspace:*",
+    "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.45.2"
+  },
+  "devDependencies": {
+    "@rgm/config": "workspace:*",
+    "@types/node": "^24.13.2",
+    "tsx": "^4.23.13",
+    "typescript": "~6.0.3"
+  }
+}
