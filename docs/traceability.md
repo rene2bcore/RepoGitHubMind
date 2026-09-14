@@ -15,7 +15,7 @@
 | `search`       |          6 |         15 |         2 |        12 |       0 |                                          0 de 12 |
 | transversal    |          - |          - |         - |         - |       7 |                  seguridad y aislamiento, ver §2 |
 
-Las 20 de `auth`: 13 de integración en `apps/web/tests/auth.test.ts`, 5 unitarias del cliente en `apps/web/src/lib/api.test.ts` y 2 de navegador en `apps/web/e2e/flujo.e2e.ts` (por dos, escritorio y móvil). Las 23 de `repositories`: 11 de integración en `apps/web/tests/repositories.test.ts`, 6 unitarias del proveedor real en `packages/github/tests/rest.test.ts` y 6 de la cola en `apps/worker/tests/cola.test.ts`. Las 16 de `github-url.test.ts`, las 6 de `schemas.test.ts` y las 3 del aislamiento completan las 67 que dice `CLAUDE.md`.
+Las 20 de `auth`: 13 de integración en `apps/web/tests/auth.test.ts`, 5 unitarias del cliente en `apps/web/src/lib/api.test.ts` y 2 de navegador en `apps/web/e2e/flujo.e2e.ts` (por dos, escritorio y móvil). Las 25 de `repositories`: 12 de integración en `apps/web/tests/repositories.test.ts`, 7 unitarias del proveedor real en `packages/github/tests/rest.test.ts` y 6 de la cola en `apps/worker/tests/cola.test.ts`. Las 16 de `github-url.test.ts`, las 6 de `schemas.test.ts` y las 3 del aislamiento completan las 69 que dice `CLAUDE.md`.
 
 ## Del ticket al código
 

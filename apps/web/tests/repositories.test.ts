@@ -264,5 +264,13 @@ describe('repositories', () => {
       }
       expect(filtrado.meta.total).toBe(1)
     })
+
+    it('un filtro que no existe todavía, como category, es 422 y no se ignora (H-08)', async () => {
+      const ada = await cuentaConSesion('ada')
+      await guardar(ada.cookie, 'https://github.com/pgvector/pgvector')
+      const res = await listar(ada.cookie, '?category=machine-learning')
+      expect(res.status).toBe(422)
+      expect(JSON.stringify(await res.json())).toContain('category')
+    })
   })
 })
