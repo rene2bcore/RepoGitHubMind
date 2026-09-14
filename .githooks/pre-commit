@@ -1,0 +1,28 @@
+#!/bin/sh
+#
+# R-01: nunca se commitea directo en `main` ni en una rama protegida.
+#
+# La regla estuvo escrita en CLAUDE.md desde el primer día y en el proyecto
+# de origen se incumplió 45 veces sin que nadie lo notara. Auditar el pasado
+# no es computable -git no guarda en qué rama se hizo un commit-, pero
+# impedirlo sí: la rama actual existe en el momento de commitear.
+#
+# Lo prueba scripts/probar-hook-rama.mjs, que corre en CI.
+#
+# Se activa con `git config core.hooksPath .githooks`, o desde el script
+# `prepare` de package.json: "prepare": "git config core.hooksPath .githooks"
+
+# Sin rama no hay nada que decidir: un HEAD desacoplado es como trabajan
+# rebase, bisect y cherry-pick a mitad, y bloquearlos rompería a quien arregla
+# su propia rama de trabajo.
+rama=$(git symbolic-ref --short -q HEAD) || exit 0
+
+# Solo `main`: las ramas de entrega viven en el fork académico, no aquí.
+# Para proteger también `develop` y toda `release/*`: `main | develop | release/*)`
+case "$rama" in
+  main)
+    echo "pre-commit: no se commitea directo en '$rama' (R-01, CLAUDE.md)." >&2
+    echo "La rama es por unidad de trabajo: git switch -c feat/<slug>" >&2
+    exit 1
+    ;;
+esac
