@@ -2,3 +2,4 @@ export { getDb, closeDb, databaseUrlForEnv, schema, type Database } from './clie
 export * from './schema'
 export * from './queue'
 export * from './sessions'
+export { TAXONOMY, flattenTaxonomy, seedTaxonomy, type TaxonomyEntry } from './taxonomy'
