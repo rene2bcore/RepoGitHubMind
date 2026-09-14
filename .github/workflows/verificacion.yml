@@ -1,0 +1,205 @@
+name: Verificación
+
+# La documentación viva solo se sostiene si algo la comprueba en cada cambio.
+# Sin esto, `docs/` vuelve a ser una foto del día que se escribió.
+#
+# Todo lo de aquí es determinista y **bloquea**. El revisor adversarial va en
+# su propio workflow y no bloquea; ver `.github/calibracion-revision.md`.
+#
+# Hasta la Entrega 2 no hay `package.json` (H-01). Los jobs que necesitan el
+# código se omiten en verde y lo dicen en el resumen, por la misma razón que
+# el revisor sin credencial: un rojo por algo que todavía no existe enseña a
+# ignorar el rojo. Lo que sí existe -documentación, hooks, catálogo de
+# mutaciones- se comprueba desde el primer push.
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  codigo:
+    name: Hay código que verificar
+    runs-on: ubuntu-latest
+    outputs:
+      existe: ${{ steps.mirar.outputs.existe }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: mirar
+        run: |
+          if [ -f package.json ]; then
+            echo "existe=si" >> "$GITHUB_OUTPUT"
+          else
+            echo "existe=no" >> "$GITHUB_OUTPUT"
+            echo "todavía no hay \`package.json\`: se omiten lint, tipos, pruebas y contrato (H-01)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  verificar:
+    name: Lint, tipos, formato, auditoría y pruebas
+    needs: codigo
+    if: needs.codigo.outputs.existe == 'si'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: rgm
+          POSTGRES_PASSWORD: rgm
+          POSTGRES_DB: repogithubmind_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U rgm" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://rgm:rgm@localhost:5432/repogithubmind_test
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: cp .env.example .env
+      - run: pnpm typecheck
+      - run: pnpm lint
+      # El formato lo aplica un hook de Claude en local; esto es lo que lo
+      # comprueba. Sin este paso, en el proyecto de origen llegaron sin
+      # formatear un fichero de pruebas y dos README el mismo día.
+      - run: pnpm format:check
+      # Falla con una vulnerabilidad alta o crítica en cualquier dependencia,
+      # también de desarrollo. Consulta el registro, así que un rojo aquí
+      # puede ser de red; se relanza antes de investigar.
+      - name: Sin vulnerabilidades altas en las dependencias
+        run: pnpm audit --audit-level=high
+      - run: pnpm db:migrate
+      # La salida se guarda para contrastar el número de pruebas con CLAUDE.md,
+      # que es el único sitio que lo cita. `pipefail` es obligatorio: sin él,
+      # el `tee` taparía el código de salida de la suite (R-06), y el
+      # verificador lo comprueba leyendo este fichero.
+      - name: Pruebas, y su número contra CLAUDE.md
+        run: |
+          set -o pipefail
+          pnpm test 2>&1 | tee salida-pruebas.txt
+          node scripts/recuento-pruebas.mjs monorepo salida-pruebas.txt
+      # El contrato se genera desde los esquemas Zod, así que no puede quedarse
+      # atrás por olvido; lo que sí puede es que nadie regenere el fichero
+      # versionado. Este paso compara los dos y sale distinto de cero si
+      # difieren. No arregla nada: el arreglo es `pnpm openapi:generate` en
+      # local, y el humano en el bucle.
+      - name: El contrato versionado sigue al día
+        run: pnpm openapi:check
+
+  navegador:
+    name: Lo que se ve en pantalla (Playwright)
+    needs: codigo
+    if: needs.codigo.outputs.existe == 'si'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: rgm
+          POSTGRES_PASSWORD: rgm
+          POSTGRES_DB: repogithubmind_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U rgm" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://rgm:rgm@localhost:5432/repogithubmind_test
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: cp .env.example .env
+      - run: pnpm --filter web exec playwright install --with-deps chromium
+      # El E2E levanta web y worker contra la base de pruebas, nunca la de
+      # desarrollo, y deshace las tablas al terminar. Recorre entero el flujo
+      # principal que se demuestra: si falla, el producto no se puede demostrar.
+      - name: Pruebas de navegador
+        run: pnpm test:e2e
+      - name: Guardar las trazas si algo falla
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: trazas-e2e
+          path: apps/web/test-results/
+          retention-days: 7
+
+  documentacion:
+    name: La documentación corresponde con el código
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # R-08 lee los commits del push y los compara con las demás ramas.
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Contrastar documentación contra código
+        run: node scripts/verificar-docs.mjs
+
+      # Los hooks corren en la máquina de quien commitea, y CI no puede saber
+      # si allí están activados. Lo que sí comprueba es que deciden bien, y en
+      # Linux, que es donde Git ignora un hook sin bit de ejecución.
+      - name: El hook de rama rechaza main (R-01)
+        run: node scripts/probar-hook-rama.mjs
+
+      - name: El hook de mensaje exige commits convencionales
+        run: node scripts/probar-hook-mensaje.mjs
+
+      - name: La comprobación de R-08 decide bien
+        run: node scripts/probar-fix-con-prueba.mjs
+
+      # R-08: todo commit `fix:` toca una prueba o dice por qué no, con una
+      # línea `Sin-prueba: <motivo>`. Solo mira los commits de este push. Si
+      # `before` no existe (rama nueva o historial reescrito), mira lo que no
+      # está en ninguna otra rama. No corre en `pull_request`: el rango del PR
+      # arrastra la unidad entera.
+      - name: Todo fix deja una prueba o dice por qué no (R-08)
+        if: github.event_name == 'push'
+        env:
+          ANTES: ${{ github.event.before }}
+          DESPUES: ${{ github.sha }}
+          RAMA: ${{ github.ref_name }}
+        run: |
+          set -o pipefail
+          if git cat-file -e "$ANTES^{commit}" 2>/dev/null; then
+            node scripts/fix-con-prueba.mjs "$ANTES..$DESPUES"
+          else
+            refs=$(git for-each-ref --format='%(refname)' refs/remotes/origin)
+            otras=$(printf '%s\n' "$refs" | grep -vxF "refs/remotes/origin/$RAMA" || true)
+            node scripts/fix-con-prueba.mjs "$DESPUES" --not $otras
+          fi
+
+  mutaciones:
+    name: Las comprobaciones muerden (R-14)
+    needs: codigo
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
+        if: needs.codigo.outputs.existe == 'si'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Instalar el monorepo
+        if: needs.codigo.outputs.existe == 'si'
+        run: pnpm install --frozen-lockfile && cp .env.example .env
+      # Reintroduce defectos que ya existieron y exige que la comprobación que
+      # dice cubrir cada uno se ponga en rojo por ese motivo, no por otro.
+      # Falla también si una mutación ya no se puede aplicar porque el código
+      # cambió: una mutación que no se aplica es un verde falso. Sin código,
+      # el catálogo solo tiene las entradas del propio harness, y esas muerden
+      # desde el primer push.
+      - name: Catálogo de mutaciones
+        run: node scripts/mutaciones.mjs
