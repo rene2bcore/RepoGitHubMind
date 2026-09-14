@@ -5,15 +5,17 @@ import { chromium, devices } from '@playwright/test'
 
 /**
  * Capturas de pantalla para `docs/evidencia/` (sección 1.3 del readme de
- * LIDR). Recorre el flujo real contra un servidor ya levantado con la base
- * de pruebas, GitHub y la IA falsos y el worker en marcha, y guarda cada
- * pantalla a móvil y a escritorio.
+ * LIDR). Recorre el flujo real contra un servidor de producción ya levantado
+ * (sin la insignia del servidor de desarrollo), con GitHub y la IA falsos y
+ * el worker en marcha, y guarda cada pantalla a móvil y a escritorio.
  *
- * Uso, con las mismas variables en los dos procesos
- * (DATABASE_URL=<base de pruebas> GITHUB_FAKE=1 AI_ANALYSIS_ENABLED=true AI_FAKE=1):
- *   apps/web:    pnpm exec next dev -p 3002
+ * Uso, con las mismas variables en la web y el worker (DATABASE_URL de una
+ * base migrada, AUTH_SECRET, GITHUB_FAKE=1, AI_ANALYSIS_ENABLED=true,
+ * AI_FAKE=1):
+ *   apps/web:    pnpm build && pnpm exec next start -p 3006
+ *                (o la imagen de producción: docker run ... repogithubmind-web)
  *   apps/worker: pnpm exec tsx src/index.ts
- *   apps/web:    pnpm exec tsx scripts/capturas.ts http://localhost:3002
+ *   apps/web:    pnpm exec tsx scripts/capturas.ts http://localhost:3006
  */
 const base = process.argv[2] ?? 'http://localhost:3002'
 const out = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'docs', 'evidencia')
@@ -28,15 +30,19 @@ for (const [nombre, contexto] of [
   const ctx = await browser.newContext(contexto)
   const page = await ctx.newPage()
   const email = `capturas-${nombre}-${Date.now()}@example.com`
-  const foto = (fichero: string) =>
-    // `caret: 'initial'`: ocultar el cursor inyecta un estilo en el campo de la
-    // URL, React lo ve como un desajuste de hidratación y el aviso de Next
-    // salía en todas las capturas.
-    page.screenshot({
+  // Se espera a que React termine de hidratar: capturar antes hace que
+  // Playwright toque el DOM a mitad y el servidor de desarrollo lo marque
+  // como error. Las capturas se hacen contra un servidor de producción.
+  // En móvil se captura lo que cabe en la pantalla del teléfono: una captura
+  // de página completa pinta la navegación inferior fija a mitad de la
+  // imagen, encima de una tarjeta, y eso no lo ve nadie en un teléfono.
+  const foto = async (fichero: string) => {
+    await page.waitForLoadState('networkidle')
+    await page.screenshot({
       path: join(out, `${fichero}-${nombre}.png`),
-      fullPage: true,
-      caret: 'initial',
+      fullPage: nombre === 'escritorio',
     })
+  }
 
   await page.goto(`${base}/register`)
   await foto('01-registro')
@@ -61,9 +67,7 @@ for (const [nombre, contexto] of [
   await page.waitForFunction(
     () => !document.body.innerText.includes('Resumen de IA en camino'),
     null,
-    {
-      timeout: 60_000,
-    },
+    { timeout: 60_000 },
   )
   // Cada cambio se espera hasta que el servidor responda: navegar antes lo
   // cancelaría y la captura del filtro saldría vacía.
@@ -94,6 +98,9 @@ for (const [nombre, contexto] of [
   await guardado
   await foto('05-detalle')
 
+  // Con sesión, /login redirige a la biblioteca: se cierra la sesión por la
+  // API con las cookies del propio navegador y se abre la pantalla de acceso.
+  await page.request.post(`${base}/api/v1/auth/logout`)
   await page.goto(`${base}/login`)
   await foto('06-acceso')
   await ctx.close()

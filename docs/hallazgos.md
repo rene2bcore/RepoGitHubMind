@@ -33,7 +33,7 @@ La severidad no se escribe: es un criterio que quien escribe inventa. El orden e
 | H-06 | Drizzle envuelve el error del driver y el código SQLSTATE no está en el nivel superior | Resuelto · `feat/RGM-2-cuentas-y-sesion` 2026-09-14                |
 | H-07 | El rate limit se evadía rotando `x-forwarded-for`, que cualquiera escribe              | Resuelto · `fix/RGM-2-rate-limit-por-cuenta` 2026-09-14            |
 | H-08 | La lista aceptaba y documentaba un filtro `category` que no filtraba                   | Resuelto · `fix/RGM-3-filtro-categoria-y-limite-github` 2026-09-14 |
-| H-09 | Todas las capturas de `docs/evidencia/` llevaban el aviso «1 Issue» de Next            | Resuelto · `feat/RGM-5-analisis-ia` 2026-09-14                     |
+| H-09 | Todas las capturas de `docs/evidencia/` llevaban el aviso «1 Issue» de Next            | Resuelto · `docs/capturas-produccion` (PR #11) 2026-09-14          |
 
 ## Plantilla de entrada
 
@@ -187,19 +187,19 @@ Con H4 (`feat/RGM-5-analisis-ia`, 2026-09-14) `category` vuelve al esquema y al 
 
 ## H-09 · Todas las capturas de `docs/evidencia/` llevaban el aviso «1 Issue» de Next
 
-**Rama:** `feat/RGM-5-analisis-ia` · **Fecha:** 2026-09-14 · **Origen:** revisión a mano de las capturas al regenerarlas con H4
+**Rama:** `main` tras el PR #10 · **Fecha:** 2026-09-14 · **Origen:** dos veces el mismo día y por separado: la rama `docs/capturas-produccion` (PR #11) y la revisión a mano de las capturas al regenerarlas con H4 en `feat/RGM-5-analisis-ia`
 
-`apps/web/scripts/capturas.ts` hacía `page.screenshot` con las opciones por defecto, y Playwright oculta el cursor inyectando `caret-color: transparent` en el campo enfocado. Next en desarrollo lo detecta como un desajuste de hidratación y pinta el aviso rojo «1 Issue» abajo a la izquierda: las capturas de biblioteca de la Entrega 2 que se entregaron lo llevan, y parece un error del producto que no existe.
+`apps/web/scripts/capturas.ts` capturaba contra el servidor de desarrollo, y la captura toca el DOM (el cursor oculto inyecta `caret-color: transparent` en el campo enfocado) antes o durante la hidratación. Next en desarrollo lo marca como desajuste de hidratación y pinta el aviso rojo «1 Issue»: las capturas de la Entrega 2 lo llevan, y parece un error del producto que en un navegador normal no ocurre.
 
-**Cómo se verificó:** el log del servidor muestra el aviso de hidratación con `style={{caret-color:"transparent"}}` en el `input` de la URL justo después de cada captura; con `caret: 'initial'` el aviso no sale y las capturas regeneradas no lo llevan.
+**Cómo se verificó:** el log del servidor de desarrollo muestra el aviso de hidratación con `style={{caret-color:"transparent"}}` en el `input` de la URL justo después de cada captura; contra un servidor de producción y tras `networkidle`, el aviso no sale.
 
-**Reproducción:** `git show 5d4e232:docs/evidencia/03-biblioteca-con-repositorios-escritorio.png` muestra el aviso; quitar `caret: 'initial'` de `capturas.ts` y volver a ejecutarlo lo reproduce.
+**Reproducción:** `git show 5d4e232:docs/evidencia/03-biblioteca-con-repositorios-escritorio.png` muestra el aviso; ejecutar `capturas.ts` contra `next dev` lo vuelve a pintar.
 
 **Daño:** evidencia entregada que aparenta un error · **Radio:** 1 sitio: `apps/web/scripts/capturas.ts` · **Reversibilidad:** sí, regenerando las capturas · **Precedencia:** ninguna
 
-**Estado:** Resuelto en `feat/RGM-5-analisis-ia` el 2026-09-14: `caret: 'initial'` y capturas regeneradas.
+**Estado:** Resuelto en `docs/capturas-produccion` (PR #11) el 2026-09-14: capturas contra la imagen de producción y tras `networkidle`. `feat/RGM-5-analisis-ia` había llegado a lo mismo con `caret: 'initial'`; al integrar `main` se portó sobre la versión del PR #11 y las capturas de H4 se regeneraron con `next start`, la IA falsa y el worker.
 
-**Qué lo vigila:** nada automático. `capturas.ts` no corre en CI; la regresión solo se ve mirando las capturas, y el comentario junto a la opción dice por qué está.
+**Qué lo vigila:** nada automático. `capturas.ts` no corre en CI; la regresión solo se ve mirando las capturas, y el comentario de `foto()` dice por qué se captura contra producción.
 
 ## Procedimiento al cambiar de rama base
 
