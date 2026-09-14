@@ -127,8 +127,8 @@ const tsvector = customType<{ data: string }>({ dataType: () => 'tsvector' })
  *
  * `search_vector` es el documento léxico de la búsqueda (H5). No es una
  * columna generada: mezcla el resumen, las categorías y los tags, que viven
- * en otras tablas. Lo escribe `refreshSearchVector` (`packages/search`) al
- * guardar el repositorio y al completar su análisis. Nunca lleva datos de
+ * en otras tablas. Lo escribe `refreshSearchVector` (`packages/search`) al dar
+ * de alta el repositorio y al completar su análisis. Nunca lleva datos de
  * `user_repositories`.
  */
 export const repositories = pgTable(

@@ -179,7 +179,7 @@ describe('GENERATE_EMBEDDING', () => {
     expect(await stored()).toBeNull()
   })
 
-  it('si el texto cambia mientras se vectoriza, el trabajo vuelve a pedirlo y lo guardado es del texto vigente', async () => {
+  it('si el texto cambia mientras se vectoriza, el trabajo vuelve a pedirlo y lo guardado es del texto vigente; si no deja de cambiar, vuelve a la cola', async () => {
     const base = new FakeEmbeddingProvider()
     let llamadas = 0
     setEmbeddingProvider({
@@ -203,5 +203,34 @@ describe('GENERATE_EMBEDDING', () => {
     expect(llamadas).toBe(2)
     expect(base.requests[1]![0]).toContain('Resumen: Resumen del reanálisis.')
     expect(await embeddingUsage()).toHaveLength(2)
+
+    // Si no deja de cambiar, no termina con un vector viejo: vuelve a la cola.
+    await getDb()
+      .update(repositoryAnalyses)
+      .set({ summary: 'Otro resumen antes de vectorizar.' })
+      .where(eq(repositoryAnalyses.repositoryId, repositoryId))
+    let reanalisis = 0
+    setEmbeddingProvider({
+      name: base.name,
+      model: base.model,
+      dimensions: base.dimensions,
+      minSimilarity: base.minSimilarity,
+      async embed(texts: string[]): Promise<EmbeddingOutcome> {
+        reanalisis += 1
+        await getDb()
+          .update(repositoryAnalyses)
+          .set({ summary: `Resumen número ${reanalisis}.` })
+          .where(eq(repositoryAnalyses.repositoryId, repositoryId))
+        return base.embed(texts)
+      },
+    })
+    const sinFin = await vectorizar()
+    expect(sinFin?.outcome).toBe('requeued')
+    expect(reanalisis).toBe(3)
+    const [trabajo] = await getDb()
+      .select()
+      .from(backgroundJobs)
+      .where(eq(backgroundJobs.id, sinFin!.job.id))
+    expect(trabajo!.lastError).toMatch(/siguió cambiando tras 3 vectorizaciones/)
   })
 })

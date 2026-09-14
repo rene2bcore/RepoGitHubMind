@@ -13,7 +13,7 @@ import { readEnv } from '@rgm/shared'
 
 export type EmbeddingJobResult = 'disabled' | 'missing' | 'cached' | 'embedded'
 
-/** Tope de vueltas si el texto sigue cambiando mientras se vectoriza. */
+/** Tope de vectorizaciones si el texto sigue cambiando mientras se vectoriza. */
 const MAX_PASSES = 3
 
 /**
@@ -33,7 +33,9 @@ const MAX_PASSES = 3
  * Tras guardar vuelve a leer el texto: si otro worker completó un reanálisis
  * mientras tanto, su `GENERATE_EMBEDDING` no se encoló porque este estaba en
  * curso, y el vector guardado sería del texto anterior. Se repite hasta que
- * lo guardado corresponde con lo vigente, con tope.
+ * lo guardado corresponde con lo vigente; si tras `MAX_PASSES` vectorizaciones
+ * el texto sigue cambiando, falla con un error reintentable y la cola lo
+ * vuelve a intentar con backoff, en vez de terminar con un vector viejo.
  */
 export async function generateEmbeddingJob(
   job: Job,
@@ -45,12 +47,15 @@ export async function generateEmbeddingJob(
   const provider = getEmbeddingProvider()
 
   let result: EmbeddingJobResult = 'cached'
-  for (let pass = 0; pass < MAX_PASSES; pass++) {
+  for (let pass = 0; ; pass++) {
     const source = await loadSemanticSource(db, repositoryId)
     if (!source) return 'missing'
     const text = buildSemanticText(source)
     const next = { sourceHash: semanticTextHash(text), model: provider.model }
     if (embeddingIsCurrent(await storedEmbedding(db, repositoryId), next)) return result
+    if (pass >= MAX_PASSES) {
+      throw new Error(`el texto semántico siguió cambiando tras ${MAX_PASSES} vectorizaciones`)
+    }
 
     let outcome
     try {
@@ -67,5 +72,4 @@ export async function generateEmbeddingJob(
     })
     result = 'embedded'
   }
-  return result
 }
