@@ -61,7 +61,7 @@ El sistema SHALL mapear las categorías sugeridas al catálogo controlado de [`.
 
 ### Requirement: Proveedor reemplazable
 
-El sistema SHALL elegir proveedor y modelo desde `AI_PROVIDER`, `AI_MODEL_ANALYSIS`, `AI_EMBEDDING_PROVIDER` y `AI_MODEL_EMBEDDING`, y NO SHALL contener ningún nombre de modelo en el código.
+El sistema SHALL elegir proveedor y modelo desde `AI_PROVIDER`, `AI_MODEL_ANALYSIS`, `AI_EMBEDDING_PROVIDER` y `AI_MODEL_EMBEDDING`, y NO SHALL contener ningún nombre de modelo en el código salvo el valor por defecto de cada proveedor, en un único sitio documentado (`packages/ai/src/defaults.ts`), que solo se usa con la variable vacía.
 
 #### Scenario: Cambiar de proveedor
 

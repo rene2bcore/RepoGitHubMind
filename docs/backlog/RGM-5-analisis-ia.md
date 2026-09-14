@@ -64,14 +64,35 @@ ENTONCES se encola un análisis nuevo; si no cambió y no caducó, no.
 
 _Motivo: el maestro §21 dice «cambió significativamente» sin definirlo; se fija en `githubPushedAt` posterior a `aiAnalyzedAt`, que es computable._
 
+_Validado el 2026-09-14 contra `specs/ai` («Repositorio que cambió») y la decisión del autor al arrancar H4._
+
 ## Fuera de alcance
 
 - Embeddings y búsqueda semántica (H5), IA local, análisis del código (R3), fallback a segundo proveedor (roadmap).
 
 ## Puntos abiertos que bloquean
 
-`PA-2` proveedor y coste medido sobre 20 repositorios.
+Ninguno. `PA-2` y `PA-3` cerrados el 2026-09-14 en [`prd.md`](../prd.md) §10: OpenRouter con `google/gemini-2.5-flash-lite` y, para H5, `openai/text-embedding-3-small` de 1536 dimensiones. El coste se midió con una llamada real, no sobre 20 repositorios.
 
 ## Tickets
 
-Se descompone al cerrar H3. Capas previstas: datos (`repository_analyses`, `categories`, `repository_categories`, `tags`, `ai_usage`, seed de taxonomía), backend/worker (`AIProvider`, registro, prompt, validación, mapeo, caché, trabajo `ANALYZE_REPOSITORY`), frontend (secciones del detalle y estado del análisis en la tarjeta).
+Construida el 2026-09-14 en `feat/RGM-5-analisis-ia`, en un solo PR y un commit por capa.
+
+**Datos.** Migración `0002` con `categories` (jerárquica, con sinónimos), `repository_categories`, `tags`, `repository_tags` y `ai_usage`; el catálogo de `taxonomy.md` en `packages/db/src/taxonomy.ts`, sembrado en todos los entornos y contrastado con el documento por `taxonomia.test.ts`.
+
+**IA.** `packages/ai`: `AIProvider`, `AIProviderRegistry`, `OpenRouterProvider`, `FakeAIProvider`, validación con un reintento, recorte del README, caché, heurística de abandono y mapeo de taxonomía.
+
+**Worker.** `ANALYZE_REPOSITORY` real en `apps/worker/src/analyze.ts`, idempotente, con backoff de la cola, `FAILED` definitivo si la salida no valida dos veces, y `ai_usage` por llamada.
+
+**Backend y frontend.** Guardar pide el análisis solo si hace falta; `POST /api/v1/repositories/{id}/analysis` para reintentar o forzar; filtro `category` por rama; categorías, análisis completo y valoración etiquetada en la tarjeta y el detalle; la lista se relee sola mientras hay un análisis en camino.
+
+**Definition of Done**
+
+- [x] CA-1 a CA-9 con prueba unitaria, de integración o de navegador; CA-9 validado contra la spec y probado
+- [x] Ninguna prueba llama a la red ni usa la clave real; una sola llamada manual con la clave, grabada en `packages/ai/tests/fixtures/openrouter-pgvector.json` y contada en el PR
+- [x] Mutación `ADR-0009` en el catálogo, vista morder en la prueba de la segunda cuenta y en la unitaria de la caché
+- [x] `pnpm openapi:check` en verde con la ruta nueva y el filtro `category`; tabla de `CLAUDE.md` al día
+- [x] `docs/capabilities/ai/README.md`; filas en `docs/traceability.md`; `ai-architecture.md` y `data-model.md` al día
+- [x] Sin dependencias nuevas del registro de npm: `fetch` nativo y `zod`, que ya estaba en el workspace
+- [x] E2E con el worker real y `AI_FAKE=1`: el resumen llega a la tarjeta sin recargar
+- [ ] Coste medido sobre 20 repositorios reales (PA-2): medido sobre uno; queda para antes de encender la IA en producción

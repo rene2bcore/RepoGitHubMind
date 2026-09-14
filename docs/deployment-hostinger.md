@@ -28,7 +28,7 @@ docker compose -f docker/docker-compose.prod.yml --env-file docker/.env --profil
 curl -fsS http://127.0.0.1:3000/api/health/ready
 ```
 
-`migrate` corre antes de `web` y `worker` en cada despliegue y es idempotente. **Una migración que borra datos no se deshace: backup antes.**
+`migrate` corre antes de `web` y `worker` en cada despliegue y es idempotente: aplica las migraciones y después el seed, que en producción solo siembra la taxonomía. Para encender el análisis de IA: `AI_ANALYSIS_ENABLED=true` y `AI_API_KEY` en `docker/.env`; sin clave, el worker no arranca y lo dice en su log. **Una migración que borra datos no se deshace: backup antes.**
 
 Vuelta atrás: `git checkout <commit anterior>` y el mismo `up -d --build`. Si la migración nueva ya cambió datos, restaurar el backup de antes del despliegue (sección Backups).
 

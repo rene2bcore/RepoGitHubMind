@@ -33,6 +33,7 @@ La severidad no se escribe: es un criterio que quien escribe inventa. El orden e
 | H-06 | Drizzle envuelve el error del driver y el código SQLSTATE no está en el nivel superior | Resuelto · `feat/RGM-2-cuentas-y-sesion` 2026-09-14                |
 | H-07 | El rate limit se evadía rotando `x-forwarded-for`, que cualquiera escribe              | Resuelto · `fix/RGM-2-rate-limit-por-cuenta` 2026-09-14            |
 | H-08 | La lista aceptaba y documentaba un filtro `category` que no filtraba                   | Resuelto · `fix/RGM-3-filtro-categoria-y-limite-github` 2026-09-14 |
+| H-09 | Todas las capturas de `docs/evidencia/` llevaban el aviso «1 Issue» de Next            | Resuelto · `feat/RGM-5-analisis-ia` 2026-09-14                     |
 
 ## Plantilla de entrada
 
@@ -180,7 +181,25 @@ La Definition of Done de RGM-11 pide `components/ui/` traídos con `shadcn add` 
 
 **Estado:** Resuelto el 2026-09-14: `category` sale del esquema hasta H4 y el esquema es `strict`: un parámetro desconocido es `422`, no se ignora. De paso, la revisión señaló que un límite de GitHub en las llamadas secundarias (lenguajes, README, releases) se tragaba como metadata incompleta; ahora se relanza.
 
-**Qué lo vigila:** `apps/web/tests/repositories.test.ts` · «un filtro que no existe todavía, como category, es 422 y no se ignora (H-08)»; `packages/github/tests/rest.test.ts` · «un límite en la llamada de lenguajes o README no se traga».
+Con H4 (`feat/RGM-5-analisis-ia`, 2026-09-14) `category` vuelve al esquema y al servicio en el mismo commit, y filtra de verdad por la rama del catálogo; un slug que el catálogo no conoce es `422` sobre `category`, no una lista vacía.
+
+**Qué lo vigila:** `apps/web/tests/repositories.test.ts` · «un filtro que la lista no conoce es 422 y no se ignora (H-08)»; `apps/web/tests/analisis.test.ts` · «el filtro por categoría toma la rama entera, se combina con los demás, y una categoría fuera del catálogo es 422»; `packages/github/tests/rest.test.ts` · «un límite en la llamada de lenguajes o README no se traga».
+
+## H-09 · Todas las capturas de `docs/evidencia/` llevaban el aviso «1 Issue» de Next
+
+**Rama:** `feat/RGM-5-analisis-ia` · **Fecha:** 2026-09-14 · **Origen:** revisión a mano de las capturas al regenerarlas con H4
+
+`apps/web/scripts/capturas.ts` hacía `page.screenshot` con las opciones por defecto, y Playwright oculta el cursor inyectando `caret-color: transparent` en el campo enfocado. Next en desarrollo lo detecta como un desajuste de hidratación y pinta el aviso rojo «1 Issue» abajo a la izquierda: las capturas de biblioteca de la Entrega 2 que se entregaron lo llevan, y parece un error del producto que no existe.
+
+**Cómo se verificó:** el log del servidor muestra el aviso de hidratación con `style={{caret-color:"transparent"}}` en el `input` de la URL justo después de cada captura; con `caret: 'initial'` el aviso no sale y las capturas regeneradas no lo llevan.
+
+**Reproducción:** `git show 5d4e232:docs/evidencia/03-biblioteca-con-repositorios-escritorio.png` muestra el aviso; quitar `caret: 'initial'` de `capturas.ts` y volver a ejecutarlo lo reproduce.
+
+**Daño:** evidencia entregada que aparenta un error · **Radio:** 1 sitio: `apps/web/scripts/capturas.ts` · **Reversibilidad:** sí, regenerando las capturas · **Precedencia:** ninguna
+
+**Estado:** Resuelto en `feat/RGM-5-analisis-ia` el 2026-09-14: `caret: 'initial'` y capturas regeneradas.
+
+**Qué lo vigila:** nada automático. `capturas.ts` no corre en CI; la regresión solo se ve mirando las capturas, y el comentario junto a la opción dice por qué está.
 
 ## Procedimiento al cambiar de rama base
 

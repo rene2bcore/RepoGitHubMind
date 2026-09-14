@@ -21,10 +21,10 @@ Ninguna. Los cambios van por `api.updatePersonal` desde `components/personal-con
 
 ## Pantallas
 
-| Ruta                 | Fichero                                | Qué hace                                                                                                                           |
-| -------------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `/library`           | `app/(app)/library/page.tsx`           | Lee `?sort`, `?status`, `?favorite` con `libraryQuerySchema`; un valor fuera del dominio se dice y se lista por defecto            |
-| `/repositories/{id}` | `app/(app)/repositories/[id]/page.tsx` | Cabecera, resumen de IA (o su estado), métricas y actividad, lenguajes, mis datos editables, README saneado. Otro id: `notFound()` |
+| Ruta                 | Fichero                                | Qué hace                                                                                                                                                                   |
+| -------------------- | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/library`           | `app/(app)/library/page.tsx`           | Lee `?sort`, `?status`, `?favorite`, `?category` con `libraryQuerySchema`; un valor fuera del dominio o una categoría fuera del catálogo se dice y se lista por defecto    |
+| `/repositories/{id}` | `app/(app)/repositories/[id]/page.tsx` | Cabecera, análisis de IA completo (o su estado, con «Reintentar»), valoración, métricas y actividad, lenguajes, mis datos editables, README saneado. Otro id: `notFound()` |
 
 ## Reglas que no se ven en el contrato
 
@@ -40,7 +40,7 @@ Ninguna. Los cambios van por `api.updatePersonal` desde `components/personal-con
 | La tarjeta refleja el cambio al momento y vuelve al valor real si el servidor lo rechaza  | Cambio desde la tarjeta                                | `components/personal-controls.tsx` (optimista con vuelta atrás)                                   | `flujo.e2e.ts` · cambiar el estado y marcar favorito desde la tarjeta                                                                            |
 | El README se renderiza sin `script`, `iframe` ni HTML crudo                               | README hostil                                          | `components/readme.ts` (`react-markdown` con `skipHtml`)                                          | `readme.test.ts`; `flujo.e2e.ts` · el README hostil de `antirez/kilo` no incrusta nada                                                           |
 
-Sin implementar: el filtro por categoría y por lenguaje o licencia en la interfaz (la API ya los acepta), las colecciones y tags personales (roadmap), y los similares (S2).
+El filtro por categoría (H4) está en la API y en la interfaz, con las categorías de la propia biblioteca: ver [`capabilities/ai`](../ai/README.md). Sin implementar: el filtro por lenguaje o licencia en la interfaz (la API ya los acepta), las colecciones y tags personales (roadmap), y los similares (S2).
 
 ## Ejecutar y probar
 

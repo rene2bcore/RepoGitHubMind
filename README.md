@@ -4,7 +4,7 @@ Las URLs de repositorios interesantes de GitHub acaban en chats de WhatsApp, not
 
 Producto open source de **2BCORE** bajo [Apache-2.0](LICENSE) y, a la vez, Proyecto Final del curso AI4Devs de LIDR. El repositorio es también el registro de **cómo** se construye: PRD y specs, trazabilidad de historia a código, decisiones en ADR, y reglas de proceso bajadas a comprobaciones que corren en CI.
 
-> **Estado a 2026-09-14:** Entrega 2 en curso. H1 (cuentas y sesión), H2 (guardar por URL con la metadata de GitHub, cola y worker) y H3 (mi biblioteca: estado, favorito, rating, notas, filtros y detalle con README saneado) están construidas y verificadas: 79 pruebas, el flujo E2E entero a escritorio y a 375 px con dos cuentas, y el contrato con ocho rutas. Las capturas están en [`docs/evidencia/`](docs/evidencia/). El análisis de IA (H4) y la búsqueda (H5) van a la Entrega final.
+> **Estado a 2026-09-14:** Entrega 2 en curso. H1 (cuentas y sesión), H2 (guardar por URL con la metadata de GitHub, cola y worker) y H3 (mi biblioteca: estado, favorito, rating, notas, filtros y detalle con README saneado) están construidas y verificadas, y H4 (análisis de IA cacheado por repositorio con OpenRouter, taxonomía controlada, coste en `ai_usage` y filtro por categoría) está en revisión: el flujo E2E entero a escritorio y a 375 px con dos cuentas y el worker real, y el contrato con nueve rutas. El número de pruebas lo da [`CLAUDE.md`](CLAUDE.md). Las capturas están en [`docs/evidencia/`](docs/evidencia/). La búsqueda (H5) va a la Entrega final.
 
 ## Ficha del proyecto
 
