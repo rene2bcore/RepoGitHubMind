@@ -94,7 +94,8 @@ export const FIXTURES: Record<string, GitHubRepositoryData> = {
     archived: false,
     fork: false,
     defaultBranch: 'master',
-    readme: '# Kilo\n\nKilo is a small text editor in less than 1K lines of code.\n',
+    readme:
+      '# Kilo\n\nKilo is a small text editor in less than 1K lines of code.\n\n<script>window.hostil = true</script>\n\n<iframe src="https://example.com"></iframe>\n\n## Usage\n\n```sh\n./kilo file.c\n```\n',
     latestRelease: null,
     githubCreatedAt: day('2016-06-04T00:00:00Z'),
     githubUpdatedAt: day('2024-01-15T00:00:00Z'),

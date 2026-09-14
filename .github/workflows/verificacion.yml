@@ -208,6 +208,10 @@ jobs:
       - name: Instalar el monorepo
         if: needs.codigo.outputs.existe == 'si'
         run: pnpm install --frozen-lockfile && cp .env.example .env
+      # La mutación `flujo-principal` ejecuta Playwright.
+      - name: Chromium para las mutaciones de navegador
+        if: needs.codigo.outputs.existe == 'si'
+        run: pnpm --filter web exec playwright install --with-deps chromium
       # Reintroduce defectos que ya existieron y exige que la comprobación que
       # dice cubrir cada uno se ponga en rojo por ese motivo, no por otro.
       # Falla también si una mutación ya no se puede aplicar porque el código

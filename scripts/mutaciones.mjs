@@ -80,9 +80,9 @@ const PLAYWRIGHT = {
   cwd: '.',
   programa: PNPM,
   args: ['test:e2e'],
-  // La cabecera del detalle, `1) [chromium] › …`, es igual en Windows y Linux
-  // y solo sale cuando algo falla.
-  fallo: /^\s*\d+\) \[chromium\]/,
+  // La cabecera del detalle, `1) [escritorio] › …`, es igual en Windows y
+  // Linux y solo sale cuando algo falla.
+  fallo: /^\s*\d+\) \[(escritorio|movil)\]/,
 }
 const FORMATO = {
   nombre: 'format:check',
@@ -157,7 +157,7 @@ const CATALOGO = [
     id: 'rutas-documentadas',
     que: 'una ruta desaparece de la tabla de CLAUDE.md sin salir del contrato',
     fichero: 'CLAUDE.md',
-    cambios: [['| GET    | `/api/v1/auth/me`       | sí   |\n', '']],
+    cambios: [['| GET    | `/api/v1/auth/me`                   | sí   |\n', '']],
     muerden: [[VERIFICADOR, 'La tabla de rutas de CLAUDE.md corresponde con el contrato']],
   },
   {
@@ -225,9 +225,27 @@ const CATALOGO = [
       ],
     ],
   },
-  // Con H3 (RGM-4) entra la mutación de la vertical entera, la única que
-  // recorre el flujo principal: la biblioteca deja de ser privada y cada
-  // cuenta ve las de todas. Muerde la prueba con dos cuentas y Playwright.
+  {
+    // La vertical del PRD: la única mutación que recorre el flujo principal
+    // entero. Sin ella, ninguna comprobación demuestra que el producto se
+    // puede demostrar.
+    id: 'flujo-principal',
+    que: 'la biblioteca deja de ser privada y cada cuenta ve las de todas',
+    fichero: 'apps/web/src/modules/repositories/service.ts',
+    cambios: [
+      [
+        '  const conditions: SQL[] = [eq(userRepositories.userId, userId)]\n',
+        '  const conditions: SQL[] = []\n',
+      ],
+    ],
+    muerden: [
+      [pruebas('library'), 'la biblioteca de Grace no trae el estado ni la nota de Ada'],
+      [
+        PLAYWRIGHT,
+        'registrarse, guardar un repositorio por URL, anotarlo, salir y volver a entrar',
+      ],
+    ],
+  },
 ]
 
 // ---------------------------------------------------------------------------

@@ -70,4 +70,18 @@ _Motivo: el maestro §43 lo exige; el PRD lo tiene como no funcional sin histori
 
 ## Tickets
 
-Se descompone al cerrar H2. Capas previstas: datos (`user_repositories`), backend (`GET /api/v1/repositories`, `GET .../{id}`, `PATCH .../{id}/personal`), frontend (biblioteca, tarjeta, detalle, filtros en URL).
+Construida el 2026-09-14 en `feat/RGM-4-mi-biblioteca`, en un solo PR sobre las tablas que H2 dejó.
+
+**Backend.** `GET /api/v1/repositories/{id}` (detalle con README y lenguajes) y `PATCH /api/v1/repositories/{id}/personal` en `apps/web/src/app/api/v1/repositories/[id]/`; `getUserRepositoryDetail` y `updatePersonal` en `modules/repositories/service.ts`; `parseParams` en `lib/http.ts` (id mal formado es 404).
+
+**Frontend.** Estado y favorito desde la tarjeta con vuelta atrás si el servidor rechaza (`components/personal-controls.tsx`); orden y filtros en la URL (`components/library-filters.tsx`); detalle en `app/(app)/repositories/[id]/page.tsx` con `components/personal-editor.tsx` y el README saneado (`components/readme.ts`, `react-markdown` con `skipHtml`).
+
+**Definition of Done**
+
+- [x] CA-1 a CA-8 con prueba de integración o de navegador; CA-9 validado contra el maestro §43 y probado (README hostil)
+- [x] La frontera privado/público con dos cuentas: `apps/web/tests/library.test.ts` y el paso 8 de `flujo.e2e.ts`
+- [x] Mutación `flujo-principal` en el catálogo, vista morder en la prueba con dos cuentas y en Playwright
+- [x] `pnpm openapi:check` en verde con las dos rutas nuevas; tabla de `CLAUDE.md` al día
+- [x] `docs/capabilities/library/README.md`; filas en `docs/traceability.md`
+- [x] Dependencias nuevas comprobadas en npm y declaradas en el PR: `react-markdown` 10.1.0, `remark-gfm` 4.0.1
+- [ ] `components/ui/` con `shadcn add` (H-04): sigue a mano; se cierra en la Entrega final

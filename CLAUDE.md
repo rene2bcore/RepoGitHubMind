@@ -45,7 +45,7 @@ pnpm openapi:generate           # escribe docs/api/openapi.json desde los esquem
 pnpm openapi:check              # sale 1 si el fichero ya no es el contrato generado. No arregla nada
 ```
 
-Hoy hay **69 pruebas** en el monorepo: 31 en web, 6 en worker y 32 en packages. **Este es el único sitio que da el número**, y CI lo contrasta con lo que ejecuta Vitest (`scripts/recuento-pruebas.mjs`): al añadir una prueba, se actualiza aquí, total y desglose.
+Hoy hay **81 pruebas** en el monorepo: 43 en web, 6 en worker y 32 en packages. **Este es el único sitio que da el número**, y CI lo contrasta con lo que ejecuta Vitest (`scripts/recuento-pruebas.mjs`): al añadir una prueba, se actualiza aquí, total y desglose.
 
 Las pruebas de navegador (Playwright, `apps/web/e2e/*.e2e.ts`) levantan `web` en el puerto 3001 contra la base de pruebas, nunca la de desarrollo, y la vacían al arrancar. Cubren pocos casos a propósito: el flujo principal entero desde la pantalla de registro y lo que ninguna otra capa ve.
 
@@ -63,16 +63,18 @@ Monolito modular en Next.js con un worker aparte y PostgreSQL + pgvector como ú
 
 ### Rutas
 
-Route Handlers bajo `/api/v1`. `scripts/verificar-docs.mjs` contrasta esta tabla contra el contrato: una ruta aquí que no esté en `openapi.json`, o al revés, pone CI en rojo. Las de detalle, datos personales y búsqueda llegan con H3 y H5 y entran aquí y en el contrato en el mismo commit que su código. Las Server Actions no van al contrato: se documentan en `docs/capabilities/`.
+Route Handlers bajo `/api/v1`. `scripts/verificar-docs.mjs` contrasta esta tabla contra el contrato: una ruta aquí que no esté en `openapi.json`, o al revés, pone CI en rojo. Las de búsqueda llegan con H5 y entran aquí y en el contrato en el mismo commit que su código. Las Server Actions no van al contrato: se documentan en `docs/capabilities/`.
 
-| Método | Ruta                    | Auth |
-| ------ | ----------------------- | ---- |
-| POST   | `/api/v1/auth/register` | no   |
-| POST   | `/api/v1/auth/login`    | no   |
-| POST   | `/api/v1/auth/logout`   | sí   |
-| GET    | `/api/v1/auth/me`       | sí   |
-| POST   | `/api/v1/repositories`  | sí   |
-| GET    | `/api/v1/repositories`  | sí   |
+| Método | Ruta                                | Auth |
+| ------ | ----------------------------------- | ---- |
+| POST   | `/api/v1/auth/register`             | no   |
+| POST   | `/api/v1/auth/login`                | no   |
+| POST   | `/api/v1/auth/logout`               | sí   |
+| GET    | `/api/v1/auth/me`                   | sí   |
+| POST   | `/api/v1/repositories`              | sí   |
+| GET    | `/api/v1/repositories`              | sí   |
+| GET    | `/api/v1/repositories/:id`          | sí   |
+| PATCH  | `/api/v1/repositories/:id/personal` | sí   |
 
 ### El modelo conceptual que no se negocia
 

@@ -9,12 +9,15 @@ import {
 } from '@rgm/db'
 import { getGitHubProvider, type GitHubRepositoryData } from '@rgm/github'
 import {
+  NotFoundError,
   parseGitHubUrl,
   readEnv,
   type LibraryQuery,
   type ListMeta,
+  type PersonalUpdateBody,
   type SaveRepositoryBody,
   type UserRepository,
+  type UserRepositoryDetail,
 } from '@rgm/shared'
 
 /**
@@ -228,6 +231,64 @@ export async function getUserRepository(
       : and(eq(userRepositories.userId, userId), eq(userRepositories.repositoryId, by.repositoryId))
   const [row] = await baseQuery(getDb()).where(where).limit(1)
   return row ? toItem(row as Row) : null
+}
+
+/**
+ * specs/library · «Detalle de un repositorio» y «Id de otra cuenta»: el
+ * detalle de **mi** relación, con el README crudo y los lenguajes. Un id que
+ * no es mío responde 404 exactamente igual que uno que no existe.
+ */
+export async function getUserRepositoryDetail(
+  userId: string,
+  id: string,
+): Promise<UserRepositoryDetail> {
+  const item = await getUserRepository(userId, { id })
+  if (!item) throw new NotFoundError()
+  const [extra] = await getDb()
+    .select({ readme: repositories.readme, languages: repositories.languages })
+    .from(repositories)
+    .where(eq(repositories.id, item.repository.id))
+    .limit(1)
+  return {
+    ...item,
+    repository: {
+      ...item.repository,
+      readme: extra?.readme ?? null,
+      languages: extra?.languages ?? {},
+    },
+  }
+}
+
+/**
+ * specs/library · «Estado personal con nueve valores fijos», «Rating y
+ * notas», «Favorito y estado independientes». El cuerpo llega validado por
+ * `personalUpdateSchema` antes de resolver el id (ADR-0005). Pasar a
+ * `REVIEWED` fija `reviewedAt`; volver a otro estado no lo borra. La
+ * respuesta se relee de la base, no se devuelve lo enviado.
+ */
+export async function updatePersonal(
+  userId: string,
+  id: string,
+  body: PersonalUpdateBody,
+): Promise<UserRepository> {
+  const set: Partial<typeof userRepositories.$inferInsert> = { updatedAt: new Date() }
+  if (body.status !== undefined) {
+    set.status = body.status
+    if (body.status === 'REVIEWED') set.reviewedAt = new Date()
+  }
+  if (body.favorite !== undefined) set.favorite = body.favorite
+  if (body.rating !== undefined) set.rating = body.rating
+  if (body.notes !== undefined) set.notes = body.notes
+
+  const updated = await getDb()
+    .update(userRepositories)
+    .set(set)
+    .where(and(eq(userRepositories.userId, userId), eq(userRepositories.id, id)))
+    .returning({ id: userRepositories.id })
+  if (!updated.length) throw new NotFoundError()
+  const item = await getUserRepository(userId, { id })
+  if (!item) throw new NotFoundError()
+  return item
 }
 
 const sortColumn = {

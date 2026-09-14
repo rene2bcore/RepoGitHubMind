@@ -1,10 +1,12 @@
 import type {
   ListMeta,
   LoginBody,
+  PersonalUpdateBody,
   RegisterBody,
   SaveRepositoryBody,
   User,
   UserRepository,
+  UserRepositoryDetail,
 } from '@rgm/shared'
 
 /**
@@ -103,6 +105,12 @@ export const api = {
     })
     return { item: res.data, created: status === 201 }
   },
+  getRepository: (id: string) => request<UserRepositoryDetail>(`/api/v1/repositories/${id}`),
+  updatePersonal: (id: string, body: PersonalUpdateBody) =>
+    request<UserRepository>(`/api/v1/repositories/${id}/personal`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
   listRepositories: async (params: Record<string, string> = {}) => {
     const qs = new URLSearchParams(params).toString()
     const { body } = await requestFull<UserRepository[]>(
