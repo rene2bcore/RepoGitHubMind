@@ -26,7 +26,7 @@ export function PersonalEditor({ id, personal: initial }: { id: string; personal
     try {
       const item = await api.updatePersonal(id, {
         rating,
-        notes: notes.trim() === '' ? null : notes,
+        notes: notes.trim() === '' ? null : notes.trim(),
       })
       setPersonal(item.personal)
       setNotes(item.personal.notes ?? '')

@@ -3,12 +3,12 @@ import type { UserRepository } from '@rgm/shared'
 import { Card } from '@/components/ui/card'
 import { PersonalControls } from '@/components/personal-controls'
 
-/** 19400 -> «19,4k», 980 -> «980», 120500 -> «121k». */
+/** 19400 -> «19.4k», 980 -> «980», 120500 -> «121k». Es el formato de la spec. */
 export function formatStars(n: number): string {
   if (n < 1000) return String(n)
   const k = n / 1000
   const text = k < 100 ? k.toFixed(1).replace(/\.0$/, '') : String(Math.round(k))
-  return `${text.replace('.', ',')}k`
+  return `${text}k`
 }
 
 /** «hace 2 días», «hace 3 meses». Sin librería: cuatro escalas bastan. */

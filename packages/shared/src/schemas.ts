@@ -168,17 +168,24 @@ const booleanParam = z
   .transform((v) => v === 'true')
   .optional()
 
-export const libraryQuerySchema = z.object({
-  status: z.enum(PERSONAL_STATUSES).optional(),
-  favorite: booleanParam,
-  language: z.string().trim().min(1).max(60).optional(),
-  license: z.string().trim().min(1).max(60).optional(),
-  category: z.string().trim().min(1).max(120).optional(),
-  minStars: z.coerce.number().int().min(0).optional(),
-  sort: z.enum(LIBRARY_SORTS).default('savedAt'),
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(24),
-})
+/**
+ * Los parámetros de la lista. `strict`: un parámetro que no está aquí es 422,
+ * no se ignora (specs/library · «Lista con orden y filtros»). El filtro por
+ * categoría entra en el esquema con H4, cuando existan categorías; hasta
+ * entonces aceptarlo sería documentar un filtro que no filtra (H-08).
+ */
+export const libraryQuerySchema = z
+  .object({
+    status: z.enum(PERSONAL_STATUSES).optional(),
+    favorite: booleanParam,
+    language: z.string().trim().min(1).max(60).optional(),
+    license: z.string().trim().min(1).max(60).optional(),
+    minStars: z.coerce.number().int().min(0).optional(),
+    sort: z.enum(LIBRARY_SORTS).default('savedAt'),
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(24),
+  })
+  .strict()
 export type LibraryQuery = z.infer<typeof libraryQuerySchema>
 
 export const searchQuerySchema = z.object({

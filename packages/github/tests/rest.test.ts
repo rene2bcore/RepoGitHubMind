@@ -145,6 +145,17 @@ describe('RestGitHubProvider', () => {
     expect(calls).toHaveLength(2)
   })
 
+  it('un límite en la llamada de lenguajes o README no se traga: es GitHubRateLimitError', async () => {
+    const { fetchImpl } = fakeFetch({
+      '/repos/pgvector/pgvector': () => Response.json(REPO),
+      '/repos/pgvector/pgvector/languages': () =>
+        new Response('', { status: 403, headers: { 'x-ratelimit-remaining': '0' } }),
+    })
+    await expect(
+      new RestGitHubProvider({ fetchImpl }).fetchRepository('pgvector', 'pgvector'),
+    ).rejects.toBeInstanceOf(GitHubRateLimitError)
+  })
+
   it('un 429 con retry-after también bloquea', async () => {
     const now = 5_000_000
     const { fetchImpl } = fakeFetch({

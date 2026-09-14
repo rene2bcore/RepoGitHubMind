@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { useState, type FormEvent } from 'react'
 import type { LibraryQuery, UserRepository } from '@rgm/shared'
 import { ApiError, api } from '@/lib/api'
@@ -28,6 +29,7 @@ export function LibraryView({
   query: LibraryQuery
   queryError: string | null
 }) {
+  const router = useRouter()
   const [items, setItems] = useState(initial)
   const [url, setUrl] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -53,7 +55,10 @@ export function LibraryView({
     setSaving(true)
     try {
       const { item, created } = await api.saveRepository({ url: url.trim() })
-      setItems((list) => [item, ...list.filter((x) => x.id !== item.id)])
+      // Con un filtro activo no se antepone: un repositorio nace NEW y no
+      // tiene por qué cumplirlo. Se avisa y la lista se recarga del servidor.
+      if (filtered) router.refresh()
+      else setItems((list) => [item, ...list.filter((x) => x.id !== item.id)])
       setNotice(
         created
           ? `Guardado ${item.repository.fullName}`
@@ -72,7 +77,14 @@ export function LibraryView({
   }
 
   const count = Math.max(total, items.length)
-  const filtered = query.status !== undefined || query.favorite !== undefined
+  // Cualquier filtro activo, no solo los que tienen control en pantalla: la
+  // API acepta también language, license y minStars por la URL.
+  const filtered =
+    query.status !== undefined ||
+    query.favorite !== undefined ||
+    query.language !== undefined ||
+    query.license !== undefined ||
+    query.minStars !== undefined
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">

@@ -23,15 +23,16 @@ La severidad no se escribe: es un criterio que quien escribe inventa. El orden e
 
 ## Índice
 
-| #    | Hallazgo                                                                               | Estado                                                  |
-| ---- | -------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| H-01 | CI no puede ejecutar lint, tipos, pruebas ni contrato hasta que exista código          | Resuelto · `feat/RGM-2-cuentas-y-sesion` 2026-09-14     |
-| H-02 | El hook de formato del harness rompía toda escritura al llegar con placeholders        | Resuelto · `main` 2026-09-14                            |
-| H-03 | El merge de historias entre producto y fork pisaría `readme.md` en Windows             | Resuelto · ADR-0012, 2026-09-14                         |
-| H-04 | Los componentes de `components/ui/` están escritos a mano, no traídos con `shadcn add` | Deuda aceptada, con fecha de cierre: Entrega final      |
-| H-05 | Los puertos 5432 y 5433 del host ya estaban ocupados por otros contenedores            | Resuelto · `feat/RGM-2-cuentas-y-sesion` 2026-09-14     |
-| H-06 | Drizzle envuelve el error del driver y el código SQLSTATE no está en el nivel superior | Resuelto · `feat/RGM-2-cuentas-y-sesion` 2026-09-14     |
-| H-07 | El rate limit se evadía rotando `x-forwarded-for`, que cualquiera escribe              | Resuelto · `fix/RGM-2-rate-limit-por-cuenta` 2026-09-14 |
+| #    | Hallazgo                                                                               | Estado                                                             |
+| ---- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| H-01 | CI no puede ejecutar lint, tipos, pruebas ni contrato hasta que exista código          | Resuelto · `feat/RGM-2-cuentas-y-sesion` 2026-09-14                |
+| H-02 | El hook de formato del harness rompía toda escritura al llegar con placeholders        | Resuelto · `main` 2026-09-14                                       |
+| H-03 | El merge de historias entre producto y fork pisaría `readme.md` en Windows             | Resuelto · ADR-0012, 2026-09-14                                    |
+| H-04 | Los componentes de `components/ui/` están escritos a mano, no traídos con `shadcn add` | Deuda aceptada, con fecha de cierre: Entrega final                 |
+| H-05 | Los puertos 5432 y 5433 del host ya estaban ocupados por otros contenedores            | Resuelto · `feat/RGM-2-cuentas-y-sesion` 2026-09-14                |
+| H-06 | Drizzle envuelve el error del driver y el código SQLSTATE no está en el nivel superior | Resuelto · `feat/RGM-2-cuentas-y-sesion` 2026-09-14                |
+| H-07 | El rate limit se evadía rotando `x-forwarded-for`, que cualquiera escribe              | Resuelto · `fix/RGM-2-rate-limit-por-cuenta` 2026-09-14            |
+| H-08 | La lista aceptaba y documentaba un filtro `category` que no filtraba                   | Resuelto · `fix/RGM-3-filtro-categoria-y-limite-github` 2026-09-14 |
 
 ## Plantilla de entrada
 
@@ -164,6 +165,22 @@ La Definition of Done de RGM-11 pide `components/ui/` traídos con `shadcn add` 
 **Estado:** Resuelto el 2026-09-14: la dirección solo se lee de las cabeceras con `TRUST_PROXY=true` (detrás de Cloudflare Tunnel), y login y registro limitan además por cuenta, que es el límite que aguanta aunque la dirección no se pueda creer.
 
 **Qué lo vigila:** `apps/web/tests/auth.test.ts` · «rotar la cabecera de dirección no da más intentos contra la misma cuenta (H-07)».
+
+## H-08 · La lista aceptaba y documentaba un filtro `category` que no filtraba
+
+**Rama:** `main` tras el PR #6 · **Fecha:** 2026-09-14 · **Origen:** revisión adversarial 1 del PR #6 (grave, categoría Contrato roto en silencio)
+
+`libraryQuerySchema` y el contrato aceptaban `category` como filtro de `GET /api/v1/repositories`, pero `listUserRepositories` no lo leía: `?category=machine-learning` respondía `200` con toda la biblioteca, indistinguible de un filtro aplicado sin coincidencias. Un comentario decía «entra con H4», y el contrato decía lo contrario.
+
+**Cómo se verificó:** prueba nueva «un filtro que no existe todavía, como category, es 422 y no se ignora»: en rojo con el esquema anterior (`200`), en verde con el arreglo (`422`).
+
+**Reproducción:** `git checkout 9bc9533 -- packages/shared/src/schemas.ts; pnpm vitest run repositories` pone esa prueba en rojo.
+
+**Daño:** quien usara el filtro documentado recibía datos sin filtrar y sin aviso · **Radio:** 3 sitios: `packages/shared/src/schemas.ts` (`libraryQuerySchema`), `docs/api/openapi.json` (parámetro `category`), `apps/web/src/modules/repositories/service.ts` (`listUserRepositories`) · **Reversibilidad:** sí · **Precedencia:** H4 añade `category` al esquema y al servicio en el mismo commit
+
+**Estado:** Resuelto el 2026-09-14: `category` sale del esquema hasta H4 y el esquema es `strict`: un parámetro desconocido es `422`, no se ignora. De paso, la revisión señaló que un límite de GitHub en las llamadas secundarias (lenguajes, README, releases) se tragaba como metadata incompleta; ahora se relanza.
+
+**Qué lo vigila:** `apps/web/tests/repositories.test.ts` · «un filtro que no existe todavía, como category, es 422 y no se ignora (H-08)»; `packages/github/tests/rest.test.ts` · «un límite en la llamada de lenguajes o README no se traga».
 
 ## Procedimiento al cambiar de rama base
 
