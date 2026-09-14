@@ -1,4 +1,5 @@
 import type {
+  AnalysisRequestBody,
   ListMeta,
   LoginBody,
   PersonalUpdateBody,
@@ -111,6 +112,14 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(body),
     }),
+  /** 202 si queda un análisis en camino, 200 si no hacía falta: `enqueued` lo dice. */
+  requestAnalysis: async (id: string, body: AnalysisRequestBody = {}) => {
+    const { status, body: res } = await requestFull<UserRepository>(
+      `/api/v1/repositories/${id}/analysis`,
+      { method: 'POST', body: JSON.stringify(body) },
+    )
+    return { item: res.data, enqueued: status === 202 }
+  },
   listRepositories: async (params: Record<string, string> = {}) => {
     const qs = new URLSearchParams(params).toString()
     const { body } = await requestFull<UserRepository[]>(

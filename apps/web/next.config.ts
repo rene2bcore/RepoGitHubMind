@@ -3,7 +3,7 @@ import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   // Los paquetes del workspace se consumen como TypeScript sin compilar.
-  transpilePackages: ['@rgm/shared', '@rgm/db', '@rgm/github'],
+  transpilePackages: ['@rgm/shared', '@rgm/db', '@rgm/github', '@rgm/ai'],
   // La imagen de producción (docker/Dockerfile.web) copia solo la salida
   // standalone. En un monorepo el trazado de dependencias parte de la raíz.
   output: 'standalone',

@@ -84,6 +84,7 @@ Route Handlers bajo `/api/v1`. `scripts/verificar-docs.mjs` contrasta esta tabla
 | GET    | `/api/v1/repositories`              | sí   |
 | GET    | `/api/v1/repositories/:id`          | sí   |
 | PATCH  | `/api/v1/repositories/:id/personal` | sí   |
+| POST   | `/api/v1/repositories/:id/analysis` | sí   |
 
 ### El modelo conceptual que no se negocia
 

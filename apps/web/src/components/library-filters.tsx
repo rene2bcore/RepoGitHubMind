@@ -1,7 +1,7 @@
 'use client'
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { LIBRARY_SORTS, PERSONAL_STATUSES, type LibraryQuery } from '@rgm/shared'
+import { LIBRARY_SORTS, PERSONAL_STATUSES, type Category, type LibraryQuery } from '@rgm/shared'
 import { STATUS_LABELS } from '@/components/repository-card'
 
 const SORT_LABELS: Record<(typeof LIBRARY_SORTS)[number], string> = {
@@ -16,9 +16,16 @@ const SORT_LABELS: Record<(typeof LIBRARY_SORTS)[number], string> = {
  * Orden y filtros de la biblioteca, que viajan en la URL (specs/library ·
  * «Lista con orden y filtros»): la página del servidor los lee y los valida
  * con el mismo esquema que la API. Cambiarlos es una navegación suave, sin
- * recargar.
+ * recargar. Las categorías son las de la biblioteca con sus ramas, sangradas
+ * por profundidad: elegir una rama filtra también sus hojas.
  */
-export function LibraryFilters({ query }: { query: LibraryQuery }) {
+export function LibraryFilters({
+  query,
+  categories,
+}: {
+  query: LibraryQuery
+  categories: Category[]
+}) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -60,6 +67,28 @@ export function LibraryFilters({ query }: { query: LibraryQuery }) {
           ))}
         </select>
       </label>
+      {categories.length || query.category ? (
+        <label className="flex flex-col gap-1 text-xs text-muted">
+          Categoría
+          <select
+            aria-label="Categoría"
+            className={select}
+            value={query.category ?? ''}
+            onChange={(e) => set('category', e.target.value)}
+          >
+            <option value="">Todas</option>
+            {query.category && !categories.some((c) => c.slug === query.category) ? (
+              <option value={query.category}>{query.category}</option>
+            ) : null}
+            {categories.map((c) => (
+              <option key={c.slug} value={c.slug}>
+                {'  '.repeat(c.path.split('/').length - 1)}
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
       <label className="flex min-h-9 items-center gap-2 text-sm">
         <input
           type="checkbox"

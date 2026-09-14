@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^9.1.0",
+    "@rgm/ai": "workspace:*",
     "@rgm/db": "workspace:*",
     "@rgm/github": "workspace:*",
     "@rgm/shared": "workspace:*",

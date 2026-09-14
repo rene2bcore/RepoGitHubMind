@@ -75,18 +75,38 @@ export const ABANDONMENT_RISK_SOURCES = ['HEURISTIC', 'AI'] as const
 export type AbandonmentRiskSource = (typeof ABANDONMENT_RISK_SOURCES)[number]
 
 /**
- * Lo que sale por la API de un repositorio global y de la relación privada.
- * El README no viaja en la lista: solo en el detalle (H3).
+ * El análisis de IA de un repositorio global, el mismo para todas las cuentas
+ * (specs/ai). Los campos de contenido van vacíos mientras `status` no sea
+ * `COMPLETED`. `abandonmentRisk` es una valoración, nunca un hecho: la
+ * heurística manda cuando hay datos de actividad y la IA solo cubre
+ * `UNKNOWN`; `abandonmentRiskSource` dice cuál de las dos es, para que la
+ * interfaz lo etiquete. `tags` son los de la IA; los topics de GitHub van
+ * aparte en `repository.topics`. La confianza del modelo no sale: no se
+ * muestra una precisión que no existe.
  */
 export const analysisSchema = z.object({
   status: z.enum(ANALYSIS_STATUSES),
   summary: z.string().nullable(),
   purpose: z.string().nullable(),
   mainUseCases: z.array(z.string()),
-  abandonmentRisk: z.enum(ABANDONMENT_RISKS).nullable(),
+  installationSummary: z.string().nullable(),
+  deploymentType: z.array(z.string()),
+  frameworks: z.array(z.string()),
+  maturity: z.string().nullable(),
+  advantages: z.array(z.string()),
+  limitations: z.array(z.string()),
+  targetUsers: z.array(z.string()),
+  activityAssessment: z.string().nullable(),
+  tags: z.array(z.string()),
+  abandonmentRisk: z.enum(ABANDONMENT_RISKS),
+  abandonmentRiskSource: z.enum(ABANDONMENT_RISK_SOURCES),
   aiAnalyzedAt: z.iso.datetime().nullable(),
 })
 export type Analysis = z.infer<typeof analysisSchema>
+
+/** Una categoría del catálogo controlado (docs/taxonomy.md). `path` es la jerarquía por slugs. */
+export const categorySchema = z.object({ slug: z.string(), name: z.string(), path: z.string() })
+export type Category = z.infer<typeof categorySchema>
 
 export const repositorySchema = z.object({
   id: z.uuid(),
@@ -111,7 +131,7 @@ export const repositorySchema = z.object({
   latestReleaseAt: z.iso.datetime().nullable(),
   metadataRefreshedAt: z.iso.datetime(),
   analysis: analysisSchema,
-  categories: z.array(z.object({ slug: z.string(), name: z.string() })),
+  categories: z.array(categorySchema),
 })
 export type Repository = z.infer<typeof repositorySchema>
 
@@ -170,14 +190,20 @@ const booleanParam = z
 
 /**
  * Los parámetros de la lista. `strict`: un parámetro que no está aquí es 422,
- * no se ignora (specs/library · «Lista con orden y filtros»). El filtro por
- * categoría entra en el esquema con H4, cuando existan categorías; hasta
- * entonces aceptarlo sería documentar un filtro que no filtra (H-08).
+ * no se ignora (specs/library · «Lista con orden y filtros»). `category` es el
+ * slug de una categoría del catálogo y filtra por su rama entera: `databases`
+ * incluye `vector`. Un slug con forma válida que el catálogo no conoce también
+ * es 422, pero eso lo decide el servicio, que es quien lee el catálogo (H-08).
  */
 export const libraryQuerySchema = z
   .object({
     status: z.enum(PERSONAL_STATUSES).optional(),
     favorite: booleanParam,
+    category: z
+      .string()
+      .trim()
+      .regex(/^[a-z0-9-]{1,60}$/, 'No es el slug de una categoría')
+      .optional(),
     language: z.string().trim().min(1).max(60).optional(),
     license: z.string().trim().min(1).max(60).optional(),
     minStars: z.coerce.number().int().min(0).optional(),
@@ -187,6 +213,14 @@ export const libraryQuerySchema = z
   })
   .strict()
 export type LibraryQuery = z.infer<typeof libraryQuerySchema>
+
+/**
+ * Pedir el análisis de un repositorio de mi biblioteca: reintentar uno que
+ * falló, o con `force` rehacer uno vigente (specs/ai · «Un análisis por
+ * repositorio»). `strict`: un campo desconocido es 422.
+ */
+export const analysisRequestSchema = z.object({ force: z.boolean().optional() }).strict()
+export type AnalysisRequestBody = z.infer<typeof analysisRequestSchema>
 
 export const searchQuerySchema = z.object({
   q: z.string().trim().min(2, 'Escribe al menos dos caracteres').max(200),
