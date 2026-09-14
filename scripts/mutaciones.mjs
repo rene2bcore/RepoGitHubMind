@@ -157,7 +157,7 @@ const CATALOGO = [
     id: 'rutas-documentadas',
     que: 'una ruta desaparece de la tabla de CLAUDE.md sin salir del contrato',
     fichero: 'CLAUDE.md',
-    cambios: [['| GET    | `/api/v1/auth/me`       | sí   |\n', '']],
+    cambios: [['| GET    | `/api/v1/auth/me`                   | sí   |\n', '']],
     muerden: [[VERIFICADOR, 'La tabla de rutas de CLAUDE.md corresponde con el contrato']],
   },
   {
