@@ -1,0 +1,24 @@
+{
+  "name": "@rgm/search",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@rgm/ai": "workspace:*",
+    "@rgm/db": "workspace:*",
+    "@rgm/shared": "workspace:*",
+    "drizzle-orm": "^0.45.2"
+  },
+  "devDependencies": {
+    "@rgm/config": "workspace:*",
+    "@types/node": "^24.13.2",
+    "typescript": "~6.0.3"
+  }
+}

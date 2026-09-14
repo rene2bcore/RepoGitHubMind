@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process'
 import { join } from 'node:path'
-import { count, eq } from 'drizzle-orm'
+import { and, count, eq } from 'drizzle-orm'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { AIProviderCallError, FakeAIProvider, setAIProvider } from '@rgm/ai'
 import {
@@ -66,11 +66,19 @@ describe('ANALYZE_REPOSITORY', () => {
     getDb()
       .select()
       .from(aiUsage)
-      .where(eq(aiUsage.repositoryId, ids[fullName]!))
+      .where(and(eq(aiUsage.repositoryId, ids[fullName]!), eq(aiUsage.operation, 'ANALYSIS')))
       .orderBy(aiUsage.createdAt)
+  /**
+   * Encola el análisis y vacía la cola hasta procesarlo. Completar un análisis
+   * encola GENERATE_EMBEDDING (H5), que va antes en la cola si viene de un
+   * análisis anterior: se procesa y no se mira aquí (embeddings.test.ts).
+   */
   const analizar = async (fullName: string, payload: Record<string, unknown> = {}) => {
     await enqueueJob('ANALYZE_REPOSITORY', ids[fullName]!, payload)
-    return processNextJob()
+    for (let r = await processNextJob(); r; r = await processNextJob()) {
+      if (r.job.type === 'ANALYZE_REPOSITORY') return r
+    }
+    return null
   }
 
   beforeAll(async () => {

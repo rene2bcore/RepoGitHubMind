@@ -1,7 +1,7 @@
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { config } from 'dotenv'
-import { getAIProvider } from '@rgm/ai'
+import { getAIProvider, getEmbeddingProvider } from '@rgm/ai'
 import { closeDb, purgeExpiredSessions } from '@rgm/db'
 import { readEnv } from '@rgm/shared'
 import { processNextJob } from './jobs'
@@ -13,9 +13,10 @@ import { processNextJob } from './jobs'
  * `.env` de la raíz si existe; en el contenedor las variables llegan del
  * entorno y `dotenv` no las pisa.
  *
- * Con la IA activa, el proveedor se elige al arrancar: un `AI_PROVIDER`
- * desconocido o sin clave para el proceso con un mensaje claro, en vez de
- * fallar en la primera llamada (specs/ai · «Proveedor desconocido»).
+ * Con la IA activa, los proveedores de análisis y de embeddings se eligen al
+ * arrancar: un `AI_PROVIDER` o `AI_EMBEDDING_PROVIDER` desconocido, o la
+ * falta de clave, para el proceso con un mensaje claro, en vez de fallar en
+ * la primera llamada (specs/ai · «Proveedor desconocido»).
  */
 const POLL_MS = 2_000
 const PURGE_MS = 60 * 60 * 1000
@@ -27,7 +28,8 @@ let ai = 'apagada'
 if (env.AI_ANALYSIS_ENABLED) {
   try {
     const provider = getAIProvider()
-    ai = `activa con ${provider.name} (${provider.model})`
+    const embeddings = getEmbeddingProvider()
+    ai = `activa con ${provider.name} (${provider.model}), embeddings con ${embeddings.name} (${embeddings.model})`
   } catch (error) {
     console.error(`worker: no arranca. ${error instanceof Error ? error.message : String(error)}`)
     process.exit(1)

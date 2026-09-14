@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { ValidationError, libraryQuerySchema, zodToErrors } from '@rgm/shared'
 import { LibraryView } from '@/components/library-view'
+import { repeatedParam } from '@/lib/http'
 import { currentUser } from '@/lib/session'
 import { listLibraryCategories, listUserRepositories } from '@/modules/repositories/service'
 
@@ -21,14 +22,16 @@ export default async function LibraryPage({
 }) {
   const user = await currentUser()
   if (!user) redirect('/login')
-  const raw = Object.fromEntries(
-    Object.entries(await searchParams).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v]),
-  )
-  const parsed = libraryQuerySchema.safeParse(raw)
-  let query = parsed.success ? parsed.data : libraryQuerySchema.parse({})
-  let queryError = parsed.success
+  const entries = Object.entries(await searchParams)
+  // Un parámetro repetido tampoco se ignora quedándose con uno: igual que la
+  // API responde 422, se dice y se lista con los valores por defecto.
+  const repeated = entries.filter(([, v]) => Array.isArray(v) && v.length > 1).map(([k]) => k)
+  const raw = Object.fromEntries(entries.map(([k, v]) => [k, Array.isArray(v) ? v[0] : v]))
+  const parsed = repeated.length ? null : libraryQuerySchema.safeParse(raw)
+  let query = parsed?.success ? parsed.data : libraryQuerySchema.parse({})
+  let queryError = parsed?.success
     ? null
-    : zodToErrors(parsed.error)
+    : (parsed ? zodToErrors(parsed.error) : repeated.map(repeatedParam))
         .map((e) => `${e.field}: ${e.message}`)
         .join('; ')
 

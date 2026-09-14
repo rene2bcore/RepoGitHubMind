@@ -246,6 +246,42 @@ const CATALOGO = [
     ],
   },
   {
+    // RGM-6, specs/search · «Buscar en el corpus global». El primer grave de
+    // REVIEW.md para este producto: en `global` el repositorio es de todos y
+    // la relación es de una sola cuenta. La cuenta de la sesión va en la
+    // condición del join; sin ella, el resultado trae la relación de
+    // cualquiera que lo guardara, con su nota, su estado y su rating.
+    id: 'busqueda-global-privada',
+    que: 'la búsqueda global devuelve la nota, el estado y el rating de otra cuenta',
+    fichero: 'apps/web/src/modules/repositories/service.ts',
+    cambios: [
+      [
+        '          eq(userRepositories.repositoryId, repositories.id),\n          eq(userRepositories.userId, userId),\n',
+        '          eq(userRepositories.repositoryId, repositories.id),\n',
+      ],
+    ],
+    muerden: [
+      [
+        pruebas('apps/web/tests/search'),
+        'en global, la nota, el estado y el rating de Ada no salen ni se buscan para Grace',
+      ],
+    ],
+  },
+  {
+    // RGM-6, specs/search · «Buscar en mi biblioteca»: `library` es la
+    // relación de la cuenta de la sesión, no la de cualquiera.
+    id: 'busqueda-biblioteca-privada',
+    que: 'la búsqueda en mi biblioteca encuentra lo que guardaron otras cuentas',
+    fichero: 'packages/search/src/candidates.ts',
+    cambios: [['      eq(userRepositories.userId, scope.userId),\n', '']],
+    muerden: [
+      [
+        pruebas('apps/web/tests/search'),
+        'en global, la nota, el estado y el rating de Ada no salen ni se buscan para Grace',
+      ],
+    ],
+  },
+  {
     // La vertical del PRD: la única mutación que recorre el flujo principal
     // entero. Sin ella, ninguna comprobación demuestra que el producto se
     // puede demostrar.

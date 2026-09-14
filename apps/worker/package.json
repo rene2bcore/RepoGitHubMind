@@ -13,6 +13,7 @@
     "@rgm/ai": "workspace:*",
     "@rgm/db": "workspace:*",
     "@rgm/github": "workspace:*",
+    "@rgm/search": "workspace:*",
     "@rgm/shared": "workspace:*",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2"

@@ -1,6 +1,6 @@
 # Arquitectura de IA
 
-> Cómo se elige, se llama, se cachea y se paga la IA. Derivado del [prompt maestro](prompts/00-prompt-maestro.md) §17 a §22, §40, §76 y §77, y decidido en [ADR-0009](adr/0009-proveedor-de-ia-reemplazable.md). Construido con H4 (RGM-5) en `packages/ai` y `apps/worker/src/analyze.ts`; los embeddings llegan con H5. Rutas y pruebas en [`capabilities/ai/README.md`](capabilities/ai/README.md).
+> Cómo se elige, se llama, se cachea y se paga la IA. Derivado del [prompt maestro](prompts/00-prompt-maestro.md) §17 a §22, §40, §76 y §77, y decidido en [ADR-0009](adr/0009-proveedor-de-ia-reemplazable.md). Construido con H4 (RGM-5) en `packages/ai` y `apps/worker/src/analyze.ts`, y los embeddings con H5 (RGM-6) en `packages/ai/src/embeddings.ts`, `packages/search` y `apps/worker/src/embed.ts`. Rutas y pruebas en [`capabilities/ai/README.md`](capabilities/ai/README.md) y [`capabilities/search/README.md`](capabilities/search/README.md).
 
 ## Tres principios
 
@@ -15,9 +15,9 @@ Aclaración del §19: Claude Code, Codex y Cline son herramientas de desarrollo 
 | #    | Decisión                                                                                                                                                                                                                                                                                                           | Fecha      |
 | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- |
 | PA-2 | **OpenRouter** (`https://openrouter.ai/api/v1/chat/completions`, formato de OpenAI, `Authorization: Bearer AI_API_KEY`). Modelo de análisis por defecto **`google/gemini-2.5-flash-lite`**: 0,10 USD por millón de tokens de entrada y 0,40 USD por millón de salida, y admite `response_format` con `json_schema` | 2026-09-14 |
-| PA-3 | Embeddings **`openai/text-embedding-3-small`**, dimensión **1536**, por `https://openrouter.ai/api/v1/embeddings` (verificado ese día: responde 1536 dimensiones). Se construyen con H5, con la tabla `repository_embeddings`                                                                                      | 2026-09-14 |
+| PA-3 | Embeddings **`openai/text-embedding-3-small`**, dimensión **1536**, por `https://openrouter.ai/api/v1/embeddings` (verificado ese día: responde 1536 dimensiones). Construidos con H5, con la tabla `repository_embeddings`                                                                                        | 2026-09-14 |
 
-El modelo por defecto vive en **un único sitio**, `packages/ai/src/defaults.ts`, y solo se usa con `AI_MODEL_ANALYSIS` vacío. Ningún otro fichero del código nombra un modelo. Cambiar de modelo es cambiar la variable.
+Los modelos por defecto viven en **un único sitio**, `packages/ai/src/defaults.ts`, y solo se usan con `AI_MODEL_ANALYSIS` o `AI_MODEL_EMBEDDING` vacíos. Ningún otro fichero del código nombra un modelo. Cambiar de modelo es cambiar la variable.
 
 **Coste medido** con una llamada real el 2026-09-14 sobre `pgvector/pgvector` (README real recortado a 12 000 caracteres): 4 401 tokens de entrada, 672 de salida, **0,0007089 USD** declarados por OpenRouter en `usage.cost`, salida válida al primer intento y sus tres categorías mapeadas al catálogo. La medición sobre 20 repositorios que pedía PA-2 no se hizo: con esa cifra, 20 análisis son del orden de 0,015 USD, y el TTL de 90 días y el recorte de 12 000 caracteres se mantienen.
 
@@ -31,30 +31,38 @@ export interface AIProvider {
   analyzeRepository(request: AnalysisRequest): Promise<AnalysisOutcome>
 }
 
+// packages/ai/src/embeddings.ts
+export interface EmbeddingProvider {
+  readonly name: string
+  readonly model: string // lo que se guarda en repository_embeddings.model
+  readonly dimensions: number // 1536, PA-3
+  readonly minSimilarity: number // umbral de coseno del modelo
+  embed(texts: string[]): Promise<EmbeddingOutcome>
+}
+
 // packages/ai/src/registry.ts
 export class AIProviderRegistry {
-  static fromEnv(env: AIEnv): AIProviderRegistry // AI_PROVIDER, AI_MODEL_ANALYSIS, AI_API_KEY, AI_FAKE
+  static fromEnv(env: AIEnv): AIProviderRegistry // AI_PROVIDER, AI_MODEL_ANALYSIS, AI_EMBEDDING_PROVIDER, AI_MODEL_EMBEDDING, AI_API_KEY, AI_FAKE
   analysis(): AIProvider
+  embedding(): EmbeddingProvider
 }
 ```
 
-`createEmbedding` y `AI_EMBEDDING_PROVIDER` entran en la interfaz y en el registro con H5, cuando haya quien los use.
+Implementaciones: `OpenRouterProvider` y `OpenRouterEmbeddingProvider`, con `fetch` inyectable y sin SDK, que comparten la llamada HTTP y la clasificación de errores en `postOpenRouter`; y `FakeAIProvider` y `FakeEmbeddingProvider`, deterministas y sin red, que se eligen con `AI_FAKE=1` en desarrollo y en el E2E, igual que `GITHUB_FAKE`. Los dos de análisis pasan por `runStructuredAnalysis` (`packages/ai/src/analyze.ts`): el prompt, la validación y el reintento son los mismos para cualquier proveedor, y uno nuevo solo implementa la llamada.
 
-Implementaciones: `OpenRouterProvider` (`fetch` inyectable, sin SDK) y `FakeAIProvider`, determinista y sin red, que se elige con `AI_FAKE=1` en desarrollo y en el E2E, igual que `GITHUB_FAKE`. Las dos pasan por `runStructuredAnalysis` (`packages/ai/src/analyze.ts`): el prompt, la validación y el reintento son los mismos para cualquier proveedor, y uno nuevo solo implementa la llamada.
-
-`fromEnv` falla al construirse, con un mensaje que nombra la variable, si `AI_PROVIDER` no es un proveedor conocido o si falta `AI_API_KEY`. El worker lo llama al arrancar y sale con código 1: no falla en silencio en la primera llamada.
+`fromEnv` falla al construirse, con un mensaje que nombra la variable, si `AI_PROVIDER` o `AI_EMBEDDING_PROVIDER` no son proveedores conocidos o si falta `AI_API_KEY`. El worker lo llama al arrancar y sale con código 1: no falla en silencio en la primera llamada.
 
 ### Variables
 
-| Variable                                      | Qué                                                                                                                      |
-| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `AI_ANALYSIS_ENABLED`                         | Interruptor global                                                                                                       |
-| `AI_FAKE`                                     | `1`: análisis de prueba sin red ni clave. En producción el compose lo fija a `0`                                         |
-| `AI_PROVIDER`, `AI_MODEL_ANALYSIS`            | Proveedor y modelo del análisis. Modelo vacío: el de `defaults.ts`                                                       |
-| `AI_EMBEDDING_PROVIDER`, `AI_MODEL_EMBEDDING` | Proveedor y modelo de embeddings (H5). Cambiar el modelo obliga a revectorizar: la dimensión está en el esquema (`PA-3`) |
-| `AI_API_KEY`                                  | Clave del proveedor. Solo servidor, solo en la cabecera `Authorization`                                                  |
-| `AI_MAX_README_CHARS`                         | Recorte del README antes de enviarlo (12 000)                                                                            |
-| `AI_ANALYSIS_TTL_DAYS`                        | Caducidad del análisis (90)                                                                                              |
+| Variable                                      | Qué                                                                                                                                                                                                                                       |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AI_ANALYSIS_ENABLED`                         | Interruptor global                                                                                                                                                                                                                        |
+| `AI_FAKE`                                     | `1`: análisis y embeddings de prueba sin red ni clave. En producción el compose lo fija a `0`                                                                                                                                             |
+| `AI_PROVIDER`, `AI_MODEL_ANALYSIS`            | Proveedor y modelo del análisis. Modelo vacío: el de `defaults.ts`                                                                                                                                                                        |
+| `AI_EMBEDDING_PROVIDER`, `AI_MODEL_EMBEDDING` | Proveedor y modelo de embeddings (H5). Modelo vacío: el de `defaults.ts`. Cambiar el modelo revectoriza cada repositorio en su próximo `GENERATE_EMBEDDING`, obliga a medir otra vez el umbral y la dimensión está en el esquema (`PA-3`) |
+| `AI_API_KEY`                                  | Clave del proveedor. Solo servidor, solo en la cabecera `Authorization`                                                                                                                                                                   |
+| `AI_MAX_README_CHARS`                         | Recorte del README antes de enviarlo (12 000)                                                                                                                                                                                             |
+| `AI_ANALYSIS_TTL_DAYS`                        | Caducidad del análisis (90)                                                                                                                                                                                                               |
 
 Fallback a un segundo proveedor: la abstracción lo admite; en la entrega hay uno configurado (§20).
 
@@ -109,7 +117,21 @@ Usuario A guarda LangGraph: se analiza. Usuario B lo guarda: se reutiliza al mom
 
 ## Embeddings
 
-Una sola representación semántica por repositorio, construida por `packages/search/src/semantic-text.ts` con nombre, descripción, resumen, propósito, casos de uso, categorías, tags y topics. Se guarda en `repository_embeddings` con el `source_hash` del texto: si el texto no cambió, no se vuelve a pedir. No se vectoriza el repositorio completo (§22). Llega con H5.
+Una sola representación semántica por repositorio, construida por `packages/search/src/semantic-text.ts` con nombre, descripción, resumen, propósito, casos de uso, categorías, tags y topics, estable al orden de topics, tags y categorías. No se vectoriza el repositorio completo ni el README (§22).
+
+```text
+análisis COMPLETED ──(misma transacción)──> search_vector reescrito + GENERATE_EMBEDDING en cola
+GENERATE_EMBEDDING: texto semántico -> SHA-256
+   ├── hash y modelo iguales a los guardados -> completado sin llamar ni registrar coste (CA-9)
+   └── si no -> embed([texto]) -> repository_embeddings + ai_usage EMBEDDING, en una transacción
+buscar: embed([consulta]) -> ai_usage EMBEDDING sin repositorio -> coseno sobre el mismo modelo
+```
+
+Se compara solo con vectores del mismo `model`: cambiar `AI_MODEL_EMBEDDING` deja fuera de la parte semántica lo vectorizado con el anterior hasta que se revectorice. La búsqueda por significado exige una similitud de coseno de al menos `minSimilarity`; sin umbral, cualquier consulta encontraría todos los repositorios con embedding.
+
+**Umbral y coste medidos** con una sola llamada real el 2026-09-14: siete textos (los de `pgvector/pgvector` con su análisis real grabado, `langchain-ai/langgraph` y `antirez/kilo` con solo su metadata, y cuatro consultas) en una petición, 1536 dimensiones cada uno, 353 tokens, **0,00000706 USD** declarados por OpenRouter. Similitudes de las consultas relevantes con su repositorio: 0,649 («vectores en postgres» con pgvector), 0,443 («editor de texto en C» con kilo) y 0,352 («herramienta para memoria de agentes» con langgraph). Las demás parejas, de 0,166 a 0,297; la más alta, «Zeta» con kilo. El umbral por defecto queda en **0,32**, entre las dos. Es una muestra de doce parejas, no una calibración: se revisa con datos de uso. El proveedor falso usa su propio umbral (0,25), porque sus trigramas no son un modelo.
+
+Con esa cifra, vectorizar mil repositorios de unos 250 tokens cuesta del orden de 0,005 USD, y una búsqueda, menos de una millonésima de dólar.
 
 ## Coste
 
@@ -120,17 +142,22 @@ select repository_id, count(*) as llamadas, sum(estimated_cost) as usd
 from ai_usage group by repository_id order by usd desc;
 ```
 
-Topes: README recortado, `max_tokens`, TTL del análisis, un análisis por repositorio, un único reintento por salida inválida, backoff de la cola y rate limit por cuenta en la ruta de reintentar. El coste de desarrollo objetivo es cero más las APIs consumidas (§92).
+Los embeddings de las consultas de búsqueda cuentan con `operation = 'EMBEDDING'` y `repository_id` null: ni la consulta ni quién la hizo se guardan.
+
+Topes: README recortado, `max_tokens`, TTL del análisis, un análisis por repositorio, un único reintento por salida inválida, un embedding por texto distinto, backoff de la cola y rate limit por cuenta en la ruta de reintentar y en la búsqueda. El coste de desarrollo objetivo es cero más las APIs consumidas (§92).
 
 ## Fallos
 
-| Fallo                                               | Qué ve el usuario                     | Qué hace el sistema                                                                                          |
-| --------------------------------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Red, tiempo agotado, `408`, `429` o `5xx`           | «Resumen de IA en camino»             | Backoff de la cola (30 s, 60 s…; `retry-after` si viene) hasta 3 intentos; después `FAILED` con `last_error` |
-| Clave rechazada o petición inválida (`400` a `403`) | «Análisis no disponible · Reintentar» | `FAILED` al primer intento: esperar no lo arregla                                                            |
-| Respuesta que no valida                             | Igual                                 | Un reintento pidiendo corrección; después `FAILED`, sin guardar nada inválido                                |
-| `AI_ANALYSIS_ENABLED=false`                         | «Análisis desactivado»                | `DISABLED`, sin llamadas ni coste; la búsqueda funciona en modo léxico                                       |
-| `AI_PROVIDER` desconocido o sin clave               | Nada nuevo: el análisis no avanza     | El worker no arranca y lo dice                                                                               |
+| Fallo                                                                     | Qué ve el usuario                                                         | Qué hace el sistema                                                                                          |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Red, tiempo agotado, `408`, `429` o `5xx`                                 | «Resumen de IA en camino»                                                 | Backoff de la cola (30 s, 60 s…; `retry-after` si viene) hasta 3 intentos; después `FAILED` con `last_error` |
+| Clave rechazada o petición inválida (`400` a `403`)                       | «Análisis no disponible · Reintentar»                                     | `FAILED` al primer intento: esperar no lo arregla                                                            |
+| Respuesta que no valida                                                   | Igual                                                                     | Un reintento pidiendo corrección; después `FAILED`, sin guardar nada inválido                                |
+| `AI_ANALYSIS_ENABLED=false`                                               | «Análisis desactivado»                                                    | `DISABLED`, sin llamadas ni coste; la búsqueda funciona en modo léxico                                       |
+| `AI_PROVIDER` desconocido o sin clave                                     | Nada nuevo: el análisis no avanza                                         | El worker no arranca y lo dice                                                                               |
+| Embeddings: red, `429` o `5xx` en `GENERATE_EMBEDDING`                    | Nada: el repositorio sigue apareciendo por coincidencia léxica            | Backoff de la cola hasta 3 intentos; cada llamada fallida en `ai_usage`                                      |
+| Embeddings: clave rechazada o dimensión distinta de 1536                  | Igual                                                                     | `FAILED` al primer intento, sin guardar vector                                                               |
+| Embedding de la consulta que falla, o proveedor mal configurado en la web | «Solo por palabras: la búsqueda por significado no está disponible ahora» | `meta.mode = lexical`; la llamada fallida en `ai_usage`                                                      |
 
 ## Lo que no se hace
 

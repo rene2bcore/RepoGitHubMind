@@ -8,9 +8,11 @@ import { expect, test } from '@playwright/test'
  * saneado, y que otra cuenta no vea nada de eso. H4: el resumen de IA llega
  * solo a la tarjeta, con su categoría y el riesgo etiquetado como valoración,
  * el detalle trae el análisis completo, y la categoría filtra desde la URL.
- * Crece con cada historia. Si esta prueba falla, el producto no se puede
- * demostrar. GitHub y la IA son los proveedores falsos (`GITHUB_FAKE=1`,
- * `AI_FAKE=1`), y el worker corre de verdad.
+ * H5: buscar desde la pantalla con otras palabras, ver el «Por qué», filtrar
+ * por la URL y llegar al detalle. Crece con cada historia. Si esta prueba
+ * falla, el producto no se puede demostrar. GitHub y la IA son los
+ * proveedores falsos (`GITHUB_FAKE=1`, `AI_FAKE=1`), y el worker corre de
+ * verdad.
  */
 test('registrarse, guardar un repositorio por URL, anotarlo, salir y volver a entrar', async ({
   page,
@@ -82,6 +84,13 @@ test('registrarse, guardar un repositorio por URL, anotarlo, salir y volver a en
   ).toBeVisible()
   await expect(page.getByText('Riesgo de abandono · Valoración heurística')).toBeVisible()
   await expect(page.getByTestId('readme')).toContainText('pgvector')
+  // En móvil, la línea larga de un bloque de código del README no ensancha la
+  // página: se desplaza dentro del bloque (H-10). Se compara con el viewport
+  // del dispositivo y no con `innerWidth`, que en móvil crece con lo que
+  // desborda y haría pasar la comprobación con el defecto puesto.
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+    page.viewportSize()!.width,
+  )
   await page.getByLabel('Notas').fill('Probar el índice HNSW con embeddings')
   await page.getByRole('button', { name: '4 de 5' }).click()
   await page.getByRole('button', { name: 'Guardar mis datos' }).click()
@@ -116,6 +125,46 @@ test('registrarse, guardar un repositorio por URL, anotarlo, salir y volver a en
   // Por su texto: el anunciador de rutas de Next también es un `alert`.
   await expect(page.getByText('Orden o filtro no válido (category')).toBeVisible()
   await expect(page.getByTestId('repository-card')).toHaveCount(1)
+  // Un filtro repetido no se queda con uno de los dos: se dice y se lista por defecto.
+  await page.goto('/library?status=USING&status=NEW')
+  await expect(
+    page.getByText('Orden o filtro no válido (status: Este parámetro solo puede venir una vez'),
+  ).toBeVisible()
+  await expect(page.getByTestId('repository-card')).toHaveCount(2)
+
+  // H5: el buscador es lo primero de la búsqueda y encuentra lo guardado
+  // preguntando con otras palabras; cada resultado dice por qué aparece.
+  await page.getByRole('link', { name: 'Buscar' }).first().click()
+  await expect(page).toHaveURL(/\/search$/)
+  const buscador = page.getByPlaceholder('¿Qué tipo de herramienta necesitas?')
+  await expect(buscador).toBeVisible()
+  await buscador.fill('vectores en postgres')
+  await buscador.press('Enter')
+  await expect(page).toHaveURL(/\/search\?q=vectores\+en\+postgres$/)
+  const resultado = page.getByTestId('search-result').first()
+  await expect(resultado).toContainText('pgvector / pgvector')
+  await expect(resultado).toContainText('⭐ 19.4k')
+  await expect(resultado).toContainText('PostgreSQL')
+  await expect(resultado).toContainText('Activo')
+  await expect(resultado).toContainText('Por qué: Coincide «postgres»')
+  await expect(resultado).toContainText('En tu biblioteca · En uso')
+  // Un parámetro repetido no se queda en silencio con uno de los dos: se dice
+  // y no se busca, igual que la API responde 422.
+  await page.goto('/search?q=vectores%20en%20postgres&license=MIT&license=PostgreSQL')
+  await expect(page.getByText('license: Este parámetro solo puede venir una vez')).toBeVisible()
+  await expect(page.getByTestId('search-result')).toHaveCount(0)
+  // Los filtros viajan en la URL: abrirla es ver la misma búsqueda, y «atrás» la deshace.
+  await page.goto('/search?q=vectores%20en%20postgres')
+  await page.goto('/search?q=vectores%20en%20postgres&license=MIT')
+  await expect(page.getByText('Nada para «vectores en postgres»')).toBeVisible()
+  await page.goBack()
+  await page
+    .getByTestId('search-result')
+    .first()
+    .getByRole('link', { name: 'pgvector / pgvector' })
+    .click()
+  await expect(page).toHaveURL(/\/repositories\/[0-9a-f-]+$/)
+  await expect(page.getByLabel('Notas')).toHaveValue('Probar el índice HNSW con embeddings')
 
   // 6. Salir invalida la sesión: la biblioteca vuelve a pedir acceso.
   await page.getByRole('button', { name: 'Salir' }).first().click()
