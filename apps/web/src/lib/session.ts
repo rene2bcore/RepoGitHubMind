@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto'
-import { eq, sql } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { cookies } from 'next/headers'
 import { getDb, sessions, users } from '@rgm/db'
 import { AuthorizationError, readEnv, type User } from '@rgm/shared'
@@ -70,11 +70,4 @@ export async function getSessionUser(req: Request): Promise<User> {
 export async function currentUser(): Promise<User | null> {
   const store = await cookies()
   return userForToken(store.get(SESSION_COOKIE)?.value ?? null)
-}
-
-/** Sesiones caducadas que sobran. Lo llama el worker de vez en cuando; nada depende de ello. */
-export async function purgeExpiredSessions(): Promise<void> {
-  await getDb()
-    .delete(sessions)
-    .where(sql`${sessions.expiresAt} <= now()`)
 }

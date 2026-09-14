@@ -1,0 +1,15 @@
+**/node_modules
+**/.next
+**/test-results
+**/playwright-report
+**/*.tsbuildinfo
+.git
+.github
+.claude
+.githooks
+core-harness
+docs
+**/.env
+**/.env.*
+!**/.env.example
+docker/backups
