@@ -11,3 +11,4 @@ docs/prompts/00-prompt-maestro.md
 LICENSE
 apps/web/test-results
 apps/web/playwright-report
+.claude/worktrees/
