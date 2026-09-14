@@ -9,6 +9,7 @@ export default tseslint.config(
       '**/.next/**',
       '**/dist/**',
       'core-harness/**',
+      '.claude/worktrees/**',
       'packages/db/migrations/**',
       'apps/web/test-results/**',
       'apps/web/playwright-report/**',
