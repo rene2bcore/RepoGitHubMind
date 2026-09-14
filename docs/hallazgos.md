@@ -23,18 +23,19 @@ La severidad no se escribe: es un criterio que quien escribe inventa. El orden e
 
 ## Índice
 
-| #    | Hallazgo                                                                                | Estado                                                             |
-| ---- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| H-01 | CI no puede ejecutar lint, tipos, pruebas ni contrato hasta que exista código           | Resuelto · `feat/RGM-2-cuentas-y-sesion` 2026-09-14                |
-| H-02 | El hook de formato del harness rompía toda escritura al llegar con placeholders         | Resuelto · `main` 2026-09-14                                       |
-| H-03 | El merge de historias entre producto y fork pisaría `readme.md` en Windows              | Resuelto · ADR-0012, 2026-09-14                                    |
-| H-04 | Los componentes de `components/ui/` están escritos a mano, no traídos con `shadcn add`  | Deuda aceptada, con fecha de cierre: Entrega final                 |
-| H-05 | Los puertos 5432 y 5433 del host ya estaban ocupados por otros contenedores             | Resuelto · `feat/RGM-2-cuentas-y-sesion` 2026-09-14                |
-| H-06 | Drizzle envuelve el error del driver y el código SQLSTATE no está en el nivel superior  | Resuelto · `feat/RGM-2-cuentas-y-sesion` 2026-09-14                |
-| H-07 | El rate limit se evadía rotando `x-forwarded-for`, que cualquiera escribe               | Resuelto · `fix/RGM-2-rate-limit-por-cuenta` 2026-09-14            |
-| H-08 | La lista aceptaba y documentaba un filtro `category` que no filtraba                    | Resuelto · `fix/RGM-3-filtro-categoria-y-limite-github` 2026-09-14 |
-| H-09 | Todas las capturas de `docs/evidencia/` llevaban el aviso «1 Issue» de Next             | Resuelto · `docs/capturas-produccion` (PR #11) 2026-09-14          |
-| H-10 | El detalle de un repositorio desbordaba en horizontal en móvil con un README con código | Resuelto · `feat/RGM-6-busqueda-hibrida` 2026-09-14                |
+| #    | Hallazgo                                                                                   | Estado                                                             |
+| ---- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| H-01 | CI no puede ejecutar lint, tipos, pruebas ni contrato hasta que exista código              | Resuelto · `feat/RGM-2-cuentas-y-sesion` 2026-09-14                |
+| H-02 | El hook de formato del harness rompía toda escritura al llegar con placeholders            | Resuelto · `main` 2026-09-14                                       |
+| H-03 | El merge de historias entre producto y fork pisaría `readme.md` en Windows                 | Resuelto · ADR-0012, 2026-09-14                                    |
+| H-04 | Los componentes de `components/ui/` están escritos a mano, no traídos con `shadcn add`     | Deuda aceptada, con fecha de cierre: Entrega final                 |
+| H-05 | Los puertos 5432 y 5433 del host ya estaban ocupados por otros contenedores                | Resuelto · `feat/RGM-2-cuentas-y-sesion` 2026-09-14                |
+| H-06 | Drizzle envuelve el error del driver y el código SQLSTATE no está en el nivel superior     | Resuelto · `feat/RGM-2-cuentas-y-sesion` 2026-09-14                |
+| H-07 | El rate limit se evadía rotando `x-forwarded-for`, que cualquiera escribe                  | Resuelto · `fix/RGM-2-rate-limit-por-cuenta` 2026-09-14            |
+| H-08 | La lista aceptaba y documentaba un filtro `category` que no filtraba                       | Resuelto · `fix/RGM-3-filtro-categoria-y-limite-github` 2026-09-14 |
+| H-09 | Todas las capturas de `docs/evidencia/` llevaban el aviso «1 Issue» de Next                | Resuelto · `docs/capturas-produccion` (PR #11) 2026-09-14          |
+| H-10 | El detalle de un repositorio desbordaba en horizontal en móvil con un README con código    | Resuelto · `feat/RGM-6-busqueda-hibrida` 2026-09-14                |
+| H-11 | Las pantallas de búsqueda y biblioteca se quedaban con el primero de un parámetro repetido | Resuelto · `feat/RGM-6-busqueda-hibrida` 2026-09-14                |
 
 ## Plantilla de entrada
 
@@ -217,6 +218,22 @@ En `/repositories/{id}`, la rejilla de una columna del móvil tomaba como ancho 
 **Estado:** Resuelto en `feat/RGM-6-busqueda-hibrida` el 2026-09-14.
 
 **Qué lo vigila:** `apps/web/e2e/flujo.e2e.ts` · la aserción de `scrollWidth` en el detalle, en el proyecto `movil`.
+
+## H-11 · Las pantallas de búsqueda y biblioteca se quedaban con el primero de un parámetro repetido
+
+**Rama:** `feat/RGM-6-busqueda-hibrida` (PR #13) · **Fecha:** 2026-09-14 · **Origen:** revisión adversarial 1 del PR #13 (grave, categoría Contradice un escenario)
+
+`GET /api/v1/search` y `GET /api/v1/repositories` responden `422` a un parámetro repetido, pero las páginas `/search` y `/library` leían la URL con `Array.isArray(v) ? v[0] : v`: `/search?q=postgres&license=MIT&license=Apache-2.0` buscaba solo con MIT, sin decir nada. `specs/search` · «Filtros combinables en la URL» exige rechazarlo, y la URL compartida no reproducía lo mismo por la API que por la pantalla.
+
+**Cómo se verificó:** dos aserciones nuevas en `flujo.e2e.ts`, en rojo con el código anterior (el aviso no aparecía y la búsqueda devolvía resultados) y en verde con el arreglo: la pantalla dice «license: Este parámetro solo puede venir una vez» y no busca, y la biblioteca dice «status: ...» y lista por defecto.
+
+**Reproducción:** volver a `Array.isArray(v) ? v[0] : v` sin comprobar repetidos en `apps/web/src/app/(app)/search/page.tsx` y ejecutar `pnpm --filter web exec playwright test --project=escritorio`.
+
+**Daño:** una búsqueda o una biblioteca compartida por URL con un filtro repetido mostraba resultados distintos de los que dice la API, sin aviso · **Radio:** 2 sitios: `apps/web/src/app/(app)/search/page.tsx`, `apps/web/src/app/(app)/library/page.tsx` · **Reversibilidad:** sí · **Precedencia:** ninguna
+
+**Estado:** Resuelto en `feat/RGM-6-busqueda-hibrida` el 2026-09-14: las dos páginas usan `repeatedParam`, el mismo error que `parseQuery`.
+
+**Qué lo vigila:** `apps/web/e2e/flujo.e2e.ts` · `/search?q=vectores%20en%20postgres&license=MIT&license=PostgreSQL` y `/library?status=USING&status=NEW`.
 
 ## Procedimiento al cambiar de rama base
 

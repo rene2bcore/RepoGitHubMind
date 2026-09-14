@@ -8,6 +8,7 @@ import {
   type SearchResult,
 } from '@rgm/shared'
 import { SearchView } from '@/components/search-view'
+import { repeatedParam } from '@/lib/http'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { currentUser } from '@/lib/session'
 import { listSearchFacets, searchRepositories } from '@/modules/search/service'
@@ -29,15 +30,24 @@ export default async function SearchPage({
 }) {
   const user = await currentUser()
   if (!user) redirect('/login')
+  const entries = Object.entries(await searchParams)
+  // Un parámetro repetido no se resuelve quedándose con uno: se dice y no se
+  // busca, igual que la API responde 422 (specs/search · «Filtros combinables»).
+  const repeated = entries.filter(([, v]) => Array.isArray(v) && v.length > 1).map(([k]) => k)
   const params = Object.fromEntries(
-    Object.entries(await searchParams).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v]),
+    entries.map(([k, v]) => [k, Array.isArray(v) ? v[0] : v]),
   ) as Record<string, string | undefined>
   const scope = params.scope === 'global' ? 'global' : 'library'
   const facets = await listSearchFacets(user.id, scope)
 
   let result: { items: SearchResult[]; meta: SearchMeta } | null = null
   let error: string | null = null
-  if (params.q?.trim()) {
+  if (repeated.length) {
+    error = repeated
+      .map(repeatedParam)
+      .map((e) => `${e.field}: ${e.message}`)
+      .join('; ')
+  } else if (params.q?.trim()) {
     const parsed = searchQuerySchema.safeParse(params)
     if (!parsed.success) {
       error = zodToErrors(parsed.error)

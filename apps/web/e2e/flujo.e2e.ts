@@ -125,6 +125,12 @@ test('registrarse, guardar un repositorio por URL, anotarlo, salir y volver a en
   // Por su texto: el anunciador de rutas de Next también es un `alert`.
   await expect(page.getByText('Orden o filtro no válido (category')).toBeVisible()
   await expect(page.getByTestId('repository-card')).toHaveCount(1)
+  // Un filtro repetido no se queda con uno de los dos: se dice y se lista por defecto.
+  await page.goto('/library?status=USING&status=NEW')
+  await expect(
+    page.getByText('Orden o filtro no válido (status: Este parámetro solo puede venir una vez'),
+  ).toBeVisible()
+  await expect(page.getByTestId('repository-card')).toHaveCount(2)
 
   // H5: el buscador es lo primero de la búsqueda y encuentra lo guardado
   // preguntando con otras palabras; cada resultado dice por qué aparece.
@@ -142,7 +148,13 @@ test('registrarse, guardar un repositorio por URL, anotarlo, salir y volver a en
   await expect(resultado).toContainText('Activo')
   await expect(resultado).toContainText('Por qué: Coincide «postgres»')
   await expect(resultado).toContainText('En tu biblioteca · En uso')
-  // Los filtros viajan en la URL: abrirla es ver la misma búsqueda.
+  // Un parámetro repetido no se queda en silencio con uno de los dos: se dice
+  // y no se busca, igual que la API responde 422.
+  await page.goto('/search?q=vectores%20en%20postgres&license=MIT&license=PostgreSQL')
+  await expect(page.getByText('license: Este parámetro solo puede venir una vez')).toBeVisible()
+  await expect(page.getByTestId('search-result')).toHaveCount(0)
+  // Los filtros viajan en la URL: abrirla es ver la misma búsqueda, y «atrás» la deshace.
+  await page.goto('/search?q=vectores%20en%20postgres')
   await page.goto('/search?q=vectores%20en%20postgres&license=MIT')
   await expect(page.getByText('Nada para «vectores en postgres»')).toBeVisible()
   await page.goBack()
