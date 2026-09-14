@@ -1,10 +1,17 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { NotFoundError, uuidParamSchema } from '@rgm/shared'
+import { AnalysisPoller, AnalysisRetry } from '@/components/analysis-status'
 import { Card } from '@/components/ui/card'
 import { PersonalEditor } from '@/components/personal-editor'
 import { Readme } from '@/components/readme'
-import { ANALYSIS_LABELS, formatStars, relativeTime } from '@/components/repository-card'
+import {
+  ANALYSIS_LABELS,
+  RISK_LABELS,
+  RISK_SOURCE_LABELS,
+  formatStars,
+  relativeTime,
+} from '@/components/repository-card'
 import { currentUser } from '@/lib/session'
 import { getUserRepositoryDetail } from '@/modules/repositories/service'
 
@@ -15,11 +22,37 @@ const fecha = (iso: string | null) =>
     ? new Date(iso).toLocaleDateString('es', { year: 'numeric', month: 'short', day: 'numeric' })
     : '-'
 
+function List({ title, items }: { title: string; items: string[] }) {
+  if (!items.length) return null
+  return (
+    <section>
+      <h3 className="mb-1 font-medium">{title}</h3>
+      <ul className="list-disc pl-5">
+        {items.map((i) => (
+          <li key={i}>{i}</li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+function Pair({ term, values }: { term: string; values: string[] }) {
+  if (!values.length) return null
+  return (
+    <>
+      <dt className="text-muted">{term}</dt>
+      <dd>{values.join(', ')}</dd>
+    </>
+  )
+}
+
 /**
  * El detalle de **mi** relación con un repositorio (specs/library · «Detalle
- * de un repositorio»): cabecera, resumen de IA, métricas, actividad,
- * licencia, mis datos editables y el README saneado. Un id de otra cuenta es
- * la misma página de «no encontrado» que un id inexistente.
+ * de un repositorio»): cabecera, análisis de IA completo con sus categorías,
+ * valoración de madurez y abandono etiquetada por su fuente (specs/ai ·
+ * «Riesgo de abandono como valoración»), métricas, actividad, licencia, mis
+ * datos editables y el README saneado. Un id de otra cuenta es la misma
+ * página de «no encontrado» que un id inexistente.
  */
 export default async function RepositoryPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await currentUser()
@@ -35,7 +68,8 @@ export default async function RepositoryPage({ params }: { params: Promise<{ id:
     throw error
   }
   const { repository: r, personal } = item
-  const analysisNote = ANALYSIS_LABELS[r.analysis.status]
+  const a = r.analysis
+  const analysisNote = ANALYSIS_LABELS[a.status]
   const languages = Object.entries(r.languages).sort((a, b) => b[1] - a[1])
   const totalBytes = languages.reduce((sum, [, bytes]) => sum + bytes, 0)
 
@@ -75,26 +109,63 @@ export default async function RepositoryPage({ params }: { params: Promise<{ id:
         <div className="flex flex-col gap-4 md:col-span-2">
           <Card>
             <h2 className="mb-2 text-lg font-medium">Resumen</h2>
-            {r.analysis.status === 'COMPLETED' ? (
-              <div className="flex flex-col gap-2 text-sm">
-                <p>{r.analysis.summary}</p>
-                {r.analysis.purpose ? <p className="text-muted">{r.analysis.purpose}</p> : null}
-                {r.analysis.mainUseCases.length ? (
-                  <ul className="list-disc pl-5">
-                    {r.analysis.mainUseCases.map((u) => (
-                      <li key={u}>{u}</li>
+            <AnalysisPoller pending={a.status === 'PENDING'} />
+            {a.status === 'COMPLETED' ? (
+              <div className="flex flex-col gap-3 text-sm">
+                <p className="text-base">{a.summary}</p>
+                {a.purpose ? <p className="text-muted">{a.purpose}</p> : null}
+                {r.categories.length ? (
+                  <ul className="flex flex-wrap gap-1" aria-label="Categorías">
+                    {r.categories.map((c) => (
+                      <li key={c.slug}>
+                        <Link
+                          href={`/library?category=${c.slug}`}
+                          title={c.path}
+                          className="rounded bg-accent/10 px-1.5 py-0.5 text-xs text-accent hover:underline"
+                        >
+                          {c.name}
+                        </Link>
+                      </li>
                     ))}
                   </ul>
                 ) : null}
-                {r.analysis.abandonmentRisk ? (
-                  <p className="text-xs text-muted">
-                    Riesgo de abandono según la actividad: {r.analysis.abandonmentRisk} (valoración
-                    automática, no un hecho)
-                  </p>
+                <List title="Casos de uso" items={a.mainUseCases} />
+                {a.installationSummary ? (
+                  <section>
+                    <h3 className="mb-1 font-medium">Instalación</h3>
+                    <p>{a.installationSummary}</p>
+                  </section>
                 ) : null}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <List title="Ventajas" items={a.advantages} />
+                  <List title="Limitaciones" items={a.limitations} />
+                </div>
+                {a.deploymentType.length || a.frameworks.length || a.targetUsers.length ? (
+                  <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+                    <Pair term="Se despliega como" values={a.deploymentType} />
+                    <Pair term="Frameworks" values={a.frameworks} />
+                    <Pair term="Para quién" values={a.targetUsers} />
+                  </dl>
+                ) : null}
+                {a.tags.length ? (
+                  <ul className="flex flex-wrap gap-1" aria-label="Tags de IA">
+                    {a.tags.map((t) => (
+                      <li key={t} className="rounded bg-bg px-1.5 py-0.5 text-xs text-muted">
+                        {t}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                <p className="text-xs text-muted">
+                  Análisis de IA del {fecha(a.aiAnalyzedAt)}, compartido por todas las cuentas que
+                  guardan este repositorio.
+                </p>
               </div>
             ) : (
-              <p className="text-sm text-muted">{analysisNote}</p>
+              <p className="text-sm text-muted">
+                {analysisNote}
+                {a.status === 'FAILED' ? <AnalysisRetry id={item.id} /> : null}
+              </p>
             )}
           </Card>
 
@@ -110,6 +181,35 @@ export default async function RepositoryPage({ params }: { params: Promise<{ id:
           <Card>
             <h2 className="mb-2 text-lg font-medium">Mis datos</h2>
             <PersonalEditor id={item.id} personal={personal} />
+          </Card>
+          <Card>
+            <h2 className="mb-2 text-lg font-medium">Valoración</h2>
+            <dl className="flex flex-col gap-2 text-sm">
+              {a.status === 'COMPLETED' && a.maturity ? (
+                <div>
+                  <dt className="text-muted">Madurez · {RISK_SOURCE_LABELS.AI}</dt>
+                  <dd>{a.maturity}</dd>
+                </div>
+              ) : null}
+              {a.status === 'COMPLETED' && a.activityAssessment ? (
+                <div>
+                  <dt className="text-muted">Actividad · {RISK_SOURCE_LABELS.AI}</dt>
+                  <dd>{a.activityAssessment}</dd>
+                </div>
+              ) : null}
+              <div>
+                <dt className="text-muted">
+                  Riesgo de abandono · {RISK_SOURCE_LABELS[a.abandonmentRiskSource]}
+                </dt>
+                <dd className="first-letter:uppercase">{RISK_LABELS[a.abandonmentRisk]}</dd>
+              </div>
+            </dl>
+            {a.abandonmentRiskSource === 'HEURISTIC' ? (
+              <p className="mt-2 text-xs text-muted">
+                Alto si está archivado o lleva 18 meses sin push; medio sin push en 6 meses; bajo
+                con push en los últimos 6 meses. Es una valoración, no un hecho.
+              </p>
+            ) : null}
           </Card>
           <Card>
             <h2 className="mb-2 text-lg font-medium">Métricas y actividad</h2>

@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@rgm/ai": "workspace:*",
     "@rgm/db": "workspace:*",
     "@rgm/github": "workspace:*",
     "@rgm/shared": "workspace:*",

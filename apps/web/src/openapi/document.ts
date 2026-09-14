@@ -1,6 +1,7 @@
 import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi'
 import { z } from 'zod'
 import {
+  analysisRequestSchema,
   libraryQuerySchema,
   listMetaSchema,
   loginSchema,
@@ -51,6 +52,7 @@ export function buildDocument() {
   const listMeta = registry.register('ListMeta', listMetaSchema)
   const userRepositoryDetail = registry.register('UserRepositoryDetail', userRepositoryDetailSchema)
   const personalUpdateBody = registry.register('PersonalUpdateBody', personalUpdateSchema)
+  const analysisRequestBody = registry.register('AnalysisRequestBody', analysisRequestSchema)
 
   const errorResponse = (description: string) => ({
     description,
@@ -153,7 +155,9 @@ export function buildDocument() {
         },
       },
       401: errorResponse('Sin sesión'),
-      422: errorResponse('Un valor de orden o de filtro fuera del dominio'),
+      422: errorResponse(
+        'Un valor de orden o de filtro fuera del dominio, un parámetro desconocido, o una categoría que el catálogo no conoce',
+      ),
       500: errorResponse('Error interno del servidor'),
     },
   })
@@ -192,12 +196,35 @@ export function buildDocument() {
     },
   })
 
+  registry.registerPath({
+    method: 'post',
+    path: '/api/v1/repositories/{id}/analysis',
+    summary: 'Reintentar o forzar el análisis de IA de un repositorio de mi biblioteca',
+    description:
+      'El análisis es del repositorio global y lo reutilizan todas las cuentas. Sin `force`, solo se encola si no hay uno vigente: no existe, falló, caducó o el repositorio tiene pushes posteriores. Con `force: true` se rehace aunque esté vigente; el anterior se sigue viendo hasta que termine el nuevo. El cuerpo se valida antes de resolver el id.',
+    request: {
+      params: uuidParamSchema,
+      body: { content: { 'application/json': { schema: analysisRequestBody } } },
+    },
+    responses: {
+      202: dataResponse('Hay un análisis en camino', userRepository),
+      200: dataResponse('No hacía falta, o la IA está desactivada', userRepository),
+      401: errorResponse('Sin sesión'),
+      404: errorResponse('No existe, o pertenece a otra cuenta: la misma respuesta'),
+      422: errorResponse(
+        'Cuerpo que no es JSON, `force` que no es booleano, o un campo desconocido',
+      ),
+      429: errorResponse('Demasiadas peticiones de análisis desde la cuenta'),
+      500: errorResponse('Error interno del servidor'),
+    },
+  })
+
   const generator = new OpenApiGeneratorV31(registry.definitions)
   return generator.generateDocument({
     openapi: '3.1.0',
     info: {
       title: 'RepoGitHubMind API',
-      version: '0.4.0',
+      version: '0.5.0',
       description:
         'Contrato de los Route Handlers bajo /api/v1, generado desde los esquemas Zod con `pnpm openapi:generate` y vigilado en CI con `pnpm openapi:check` (ADR-0001). Toda respuesta de éxito va envuelta en { data } y toda respuesta de error en { errors: [...] }. Las Server Actions no forman parte del contrato.',
     },

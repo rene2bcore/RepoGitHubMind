@@ -28,4 +28,4 @@ Cambiar de proveedor es una variable de entorno. Cambiar el modelo de embeddings
 
 ## Cómo se comprobó
 
-Pendiente de la Entrega final (RGM-5): pruebas unitarias del registro con un proveedor falso, del cacheo (segunda cuenta no genera fila en `ai_usage`) y de la validación de salida (un `summary` de 400 caracteres se rechaza). La mutación del catálogo cambia la condición del caché para que analice siempre y exige que la prueba caiga.
+Con RGM-5 (2026-09-14): `packages/ai/tests/registry.test.ts` (proveedor desconocido, sin clave, modelo del entorno), `cache.test.ts`, `openrouter.test.ts` (un `summary` de 400 caracteres se reintenta y, si vuelve, se rechaza) y `apps/web/tests/analisis.test.ts` · «la segunda cuenta ve el análisis al momento y no se registra ninguna fila nueva en ai_usage». La mutación `ADR-0009` de `scripts/mutaciones.mjs` hace que la regla de la caché nunca reutilice y se ha visto poner en rojo esa prueba y la de la caché. PA-2 y PA-3 se cerraron el mismo día: [`../ai-architecture.md`](../ai-architecture.md).

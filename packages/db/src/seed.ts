@@ -3,21 +3,21 @@ import { dirname, join } from 'node:path'
 import { config } from 'dotenv'
 import bcrypt from 'bcryptjs'
 import { sql } from 'drizzle-orm'
-import { getDb, closeDb, users } from './index'
+import { getDb, closeDb, seedTaxonomy, users } from './index'
 
 /**
- * Semillas de desarrollo (prompt maestro §83). Un usuario de desarrollo con
- * una contraseña de ejemplo documentada, nunca real. Idempotente: si ya
- * existe, no hace nada.
+ * Semillas (prompt maestro §83). La taxonomía controlada en todos los
+ * entornos (docs/taxonomy.md), y en los que no son producción un usuario de
+ * desarrollo con una contraseña de ejemplo documentada, nunca real.
+ * Idempotente: lo que ya existe no se duplica.
  */
 export const DEV_USER = { email: 'dev@repogithubmind.local', password: 'desarrollo123' } as const
 
 export async function seed(): Promise<void> {
-  // En producción no hay usuario de desarrollo: su contraseña está en este
-  // fichero. Hoy el seed no siembra nada más; la taxonomía llega con H4 y se
-  // sembrará en todos los entornos, antes de esta línea.
-  if (process.env.NODE_ENV === 'production') return
   const db = getDb()
+  await seedTaxonomy(db)
+  // En producción no hay usuario de desarrollo: su contraseña está en este fichero.
+  if (process.env.NODE_ENV === 'production') return
   const existing = await db
     .select({ id: users.id })
     .from(users)
@@ -37,8 +37,8 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
     .then(async () => {
       console.log(
         process.env.NODE_ENV === 'production'
-          ? 'seed: producción, sin usuario de desarrollo'
-          : `seed: usuario de desarrollo ${DEV_USER.email} (contraseña de ejemplo: ${DEV_USER.password})`,
+          ? 'seed: taxonomía; producción, sin usuario de desarrollo'
+          : `seed: taxonomía y usuario de desarrollo ${DEV_USER.email} (contraseña de ejemplo: ${DEV_USER.password})`,
       )
       await closeDb()
       process.exit(0)

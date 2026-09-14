@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "RepoGitHubMind API",
-    "version": "0.4.0",
+    "version": "0.5.0",
     "description": "Contrato de los Route Handlers bajo /api/v1, generado desde los esquemas Zod con `pnpm openapi:generate` y vigilado en CI con `pnpm openapi:check` (ADR-0001). Toda respuesta de éxito va envuelta en { data } y toda respuesta de error en { errors: [...] }. Las Server Actions no forman parte del contrato."
   },
   "security": [
@@ -265,17 +265,74 @@
                       "type": "string"
                     }
                   },
-                  "abandonmentRisk": {
+                  "installationSummary": {
                     "type": [
                       "string",
                       "null"
-                    ],
+                    ]
+                  },
+                  "deploymentType": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "frameworks": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "maturity": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "advantages": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "limitations": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "targetUsers": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "activityAssessment": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "abandonmentRisk": {
+                    "type": "string",
                     "enum": [
                       "LOW",
                       "MEDIUM",
                       "HIGH",
-                      "UNKNOWN",
-                      null
+                      "UNKNOWN"
+                    ]
+                  },
+                  "abandonmentRiskSource": {
+                    "type": "string",
+                    "enum": [
+                      "HEURISTIC",
+                      "AI"
                     ]
                   },
                   "aiAnalyzedAt": {
@@ -291,7 +348,17 @@
                   "summary",
                   "purpose",
                   "mainUseCases",
+                  "installationSummary",
+                  "deploymentType",
+                  "frameworks",
+                  "maturity",
+                  "advantages",
+                  "limitations",
+                  "targetUsers",
+                  "activityAssessment",
+                  "tags",
                   "abandonmentRisk",
+                  "abandonmentRiskSource",
                   "aiAnalyzedAt"
                 ]
               },
@@ -305,11 +372,15 @@
                     },
                     "name": {
                       "type": "string"
+                    },
+                    "path": {
+                      "type": "string"
                     }
                   },
                   "required": [
                     "slug",
-                    "name"
+                    "name",
+                    "path"
                   ]
                 }
               }
@@ -586,17 +657,74 @@
                       "type": "string"
                     }
                   },
-                  "abandonmentRisk": {
+                  "installationSummary": {
                     "type": [
                       "string",
                       "null"
-                    ],
+                    ]
+                  },
+                  "deploymentType": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "frameworks": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "maturity": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "advantages": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "limitations": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "targetUsers": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "activityAssessment": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "abandonmentRisk": {
+                    "type": "string",
                     "enum": [
                       "LOW",
                       "MEDIUM",
                       "HIGH",
-                      "UNKNOWN",
-                      null
+                      "UNKNOWN"
+                    ]
+                  },
+                  "abandonmentRiskSource": {
+                    "type": "string",
+                    "enum": [
+                      "HEURISTIC",
+                      "AI"
                     ]
                   },
                   "aiAnalyzedAt": {
@@ -612,7 +740,17 @@
                   "summary",
                   "purpose",
                   "mainUseCases",
+                  "installationSummary",
+                  "deploymentType",
+                  "frameworks",
+                  "maturity",
+                  "advantages",
+                  "limitations",
+                  "targetUsers",
+                  "activityAssessment",
+                  "tags",
                   "abandonmentRisk",
+                  "abandonmentRiskSource",
                   "aiAnalyzedAt"
                 ]
               },
@@ -626,11 +764,15 @@
                     },
                     "name": {
                       "type": "string"
+                    },
+                    "path": {
+                      "type": "string"
                     }
                   },
                   "required": [
                     "slug",
-                    "name"
+                    "name",
+                    "path"
                   ]
                 }
               },
@@ -778,6 +920,15 @@
             "maxLength": 4000
           }
         }
+      },
+      "AnalysisRequestBody": {
+        "type": "object",
+        "properties": {
+          "force": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
       }
     },
     "parameters": {}
@@ -1163,6 +1314,15 @@
           {
             "schema": {
               "type": "string",
+              "pattern": "^[a-z0-9-]{1,60}$"
+            },
+            "required": false,
+            "name": "category",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
               "minLength": 1,
               "maxLength": 60
             },
@@ -1267,7 +1427,7 @@
             }
           },
           "422": {
-            "description": "Un valor de orden o de filtro fuera del dominio",
+            "description": "Un valor de orden o de filtro fuera del dominio, un parámetro desconocido, o una categoría que el catálogo no conoce",
             "content": {
               "application/json": {
                 "schema": {
@@ -1420,6 +1580,120 @@
           },
           "422": {
             "description": "Estado fuera de los nueve, rating fuera de 1..5, notas de más de 4000 caracteres, o cuerpo vacío",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errors"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errors"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repositories/{id}/analysis": {
+      "post": {
+        "summary": "Reintentar o forzar el análisis de IA de un repositorio de mi biblioteca",
+        "description": "El análisis es del repositorio global y lo reutilizan todas las cuentas. Sin `force`, solo se encola si no hay uno vigente: no existe, falló, caducó o el repositorio tiene pushes posteriores. Con `force: true` se rehace aunque esté vigente; el anterior se sigue viendo hasta que termine el nuevo. El cuerpo se valida antes de resolver el id.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalysisRequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "No hacía falta, o la IA está desactivada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/UserRepository"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Hay un análisis en camino",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/UserRepository"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errors"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe, o pertenece a otra cuenta: la misma respuesta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errors"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Cuerpo que no es JSON, `force` que no es booleano, o un campo desconocido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errors"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiadas peticiones de análisis desde la cuenta",
             "content": {
               "application/json": {
                 "schema": {

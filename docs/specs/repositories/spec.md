@@ -67,12 +67,17 @@ El sistema SHALL obtener de la REST API de GitHub, con requests autenticadas des
 
 ### Requirement: Guardar responde antes que la IA
 
-El sistema SHALL responder a `POST /api/v1/repositories` con la metadata de GitHub ya presente y el análisis en estado `PENDING`, y SHALL encolar el análisis para el worker. Guardar NO SHALL esperar ni fallar por la IA.
+El sistema SHALL responder a `POST /api/v1/repositories` con la metadata de GitHub ya presente, y SHALL encolar el análisis para el worker salvo que el repositorio ya tenga uno vigente, que se devuelve tal cual ([`specs/ai`](../ai/spec.md) · «Un análisis por repositorio»). Sin análisis vigente, el análisis de la respuesta está en `PENDING`. Guardar NO SHALL esperar ni fallar por la IA.
 
 #### Scenario: El repositorio aparece antes que su resumen
 
-- **WHEN** se guarda un repositorio
+- **WHEN** se guarda un repositorio que no tiene análisis vigente
 - **THEN** la respuesta llega con `analysis.status` `PENDING`, y el resumen aparece más tarde sin volver a guardar
+
+#### Scenario: El análisis ya existe
+
+- **WHEN** se guarda un repositorio que otra cuenta ya guardó y cuyo análisis está vigente
+- **THEN** la respuesta llega con ese análisis `COMPLETED` y no se encola nada
 
 #### Scenario: La IA falla
 

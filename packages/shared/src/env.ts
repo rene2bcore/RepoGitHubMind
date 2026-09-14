@@ -27,6 +27,12 @@ export const envSchema = z.object({
     .enum(['true', 'false'])
     .default('true')
     .transform((v) => v === 'true'),
+  // 1 para desarrollar y para el E2E sin red ni clave: el análisis lo hace
+  // `FakeAIProvider` (packages/ai), igual que GITHUB_FAKE con GitHub.
+  AI_FAKE: z
+    .enum(['0', '1'])
+    .default('0')
+    .transform((v) => v === '1'),
   AI_PROVIDER: z.string().default('openrouter'),
   AI_MODEL_ANALYSIS: z.string().optional(),
   AI_EMBEDDING_PROVIDER: z.string().default('openrouter'),

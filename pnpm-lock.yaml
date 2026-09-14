@@ -41,6 +41,9 @@ importers:
       '@asteasolutions/zod-to-openapi':
         specifier: ^9.1.0
         version: 9.1.0(zod@4.6.5)
+      '@rgm/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@rgm/db':
         specifier: workspace:*
         version: link:../../packages/db
@@ -111,6 +114,9 @@ importers:
 
   apps/worker:
     dependencies:
+      '@rgm/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@rgm/db':
         specifier: workspace:*
         version: link:../../packages/db
@@ -136,6 +142,28 @@ importers:
       tsx:
         specifier: ^4.23.13
         version: 4.23.13
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+
+  packages/ai:
+    dependencies:
+      '@rgm/shared':
+        specifier: workspace:*
+        version: link:../shared
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
+    devDependencies:
+      '@rgm/config':
+        specifier: workspace:*
+        version: link:../config
+      '@rgm/db':
+        specifier: workspace:*
+        version: link:../db
+      '@types/node':
+        specifier: ^24.13.2
+        version: 24.13.4
       typescript:
         specifier: ~6.0.3
         version: 6.0.3

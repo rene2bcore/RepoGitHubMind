@@ -2,8 +2,9 @@
 
 import { useRouter } from 'next/navigation'
 import { useState, type FormEvent } from 'react'
-import type { LibraryQuery, UserRepository } from '@rgm/shared'
+import type { Category, LibraryQuery, UserRepository } from '@rgm/shared'
 import { ApiError, api } from '@/lib/api'
+import { AnalysisPoller } from '@/components/analysis-status'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -16,18 +17,21 @@ import { RepositoryCard } from '@/components/repository-card'
  * responde con la metadata ya presente; el resumen de IA llega después
  * (specs/repositories · «Guardar responde antes que la IA»). Un repositorio
  * que ya estaba se dice, no se duplica (specs/repositories · «Ya está en mi
- * biblioteca»).
+ * biblioteca»). Mientras alguna tarjeta tenga el análisis en camino, la lista
+ * se vuelve a leer sola hasta que llegue.
  */
 export function LibraryView({
   initial,
   total,
   query,
   queryError,
+  categories,
 }: {
   initial: UserRepository[]
   total: number
   query: LibraryQuery
   queryError: string | null
+  categories: Category[]
 }) {
   const router = useRouter()
   const [items, setItems] = useState(initial)
@@ -56,9 +60,11 @@ export function LibraryView({
     try {
       const { item, created } = await api.saveRepository({ url: url.trim() })
       // Con un filtro activo no se antepone: un repositorio nace NEW y no
-      // tiene por qué cumplirlo. Se avisa y la lista se recarga del servidor.
-      if (filtered) router.refresh()
-      else setItems((list) => [item, ...list.filter((x) => x.id !== item.id)])
+      // tiene por qué cumplirlo. Sin filtro se antepone al momento. En los
+      // dos casos se relee del servidor: un repositorio ya analizado llega
+      // con categorías que el filtro de categoría todavía no ofrecía.
+      if (!filtered) setItems((list) => [item, ...list.filter((x) => x.id !== item.id)])
+      router.refresh()
       setNotice(
         created
           ? `Guardado ${item.repository.fullName}`
@@ -82,6 +88,7 @@ export function LibraryView({
   const filtered =
     query.status !== undefined ||
     query.favorite !== undefined ||
+    query.category !== undefined ||
     query.language !== undefined ||
     query.license !== undefined ||
     query.minStars !== undefined
@@ -89,6 +96,7 @@ export function LibraryView({
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
       <h1 className="mb-6 text-2xl font-semibold">Tu biblioteca</h1>
+      <AnalysisPoller pending={items.some((i) => i.repository.analysis.status === 'PENDING')} />
 
       <form
         onSubmit={save}
@@ -118,7 +126,9 @@ export function LibraryView({
         </p>
       ) : null}
 
-      {items.length > 0 || filtered ? <LibraryFilters query={query} /> : null}
+      {items.length > 0 || filtered ? (
+        <LibraryFilters query={query} categories={categories} />
+      ) : null}
       {queryError ? (
         <p role="alert" className="mb-4 text-sm text-danger">
           Orden o filtro no válido ({queryError}); se muestra la biblioteca por defecto.

@@ -20,6 +20,7 @@ x-app-env: &app-env
   GITHUB_TOKEN: ${GITHUB_TOKEN:-}
   GITHUB_FAKE: '0'
   AI_ANALYSIS_ENABLED: ${AI_ANALYSIS_ENABLED:-false}
+  AI_FAKE: '0'
   AI_PROVIDER: ${AI_PROVIDER:-openrouter}
   AI_MODEL_ANALYSIS: ${AI_MODEL_ANALYSIS:-}
   AI_EMBEDDING_PROVIDER: ${AI_EMBEDDING_PROVIDER:-openrouter}
@@ -53,7 +54,9 @@ services:
       dockerfile: docker/Dockerfile.worker
     environment: *app-env
     working_dir: /app/packages/db
-    command: ['node', '--import', 'tsx', 'src/migrate.ts']
+    # Migraciones y después el seed, que en producción solo siembra la
+    # taxonomía (idempotente): sin catálogo, la IA no puede clasificar nada.
+    command: ['sh', '-c', 'node --import tsx src/migrate.ts && node --import tsx src/seed.ts']
     depends_on:
       postgres:
         condition: service_healthy

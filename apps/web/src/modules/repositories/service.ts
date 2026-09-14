@@ -1,17 +1,25 @@
-import { and, asc, desc, eq, gte, sql, type SQL } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, inArray, sql, type SQL } from 'drizzle-orm'
+import { abandonmentAssessment, analysisStaleReason } from '@rgm/ai'
 import {
+  categories,
   enqueueJob,
   getDb,
   repositories,
   repositoryAnalyses,
+  repositoryCategories,
+  repositoryTags,
+  tags,
   userRepositories,
   type Database,
 } from '@rgm/db'
 import { getGitHubProvider, type GitHubRepositoryData } from '@rgm/github'
 import {
   NotFoundError,
+  ValidationError,
   parseGitHubUrl,
   readEnv,
+  type AnalysisRequestBody,
+  type Category,
   type LibraryQuery,
   type ListMeta,
   type PersonalUpdateBody,
@@ -27,9 +35,9 @@ import {
  *
  * `Repository` es global y se pide a GitHub **una** vez por repositorio
  * (ADR-0008): la segunda cuenta que lo guarda solo crea su relación privada.
- * La respuesta lleva la metadata ya presente y el análisis `PENDING`; el
- * análisis lo hace el worker desde la cola (ADR-0010). Si la IA está
- * apagada, el análisis nace `DISABLED` y no se encola nada.
+ * La respuesta lleva la metadata ya presente; el análisis lo hace el worker
+ * desde la cola (ADR-0010) y se pide solo si el guardado no lo tiene vigente
+ * (specs/ai · «Un análisis por repositorio»). Guardar nunca espera a la IA.
  *
  * @returns `created: false` cuando ya estaba en la biblioteca de la cuenta
  *   (specs/repositories · «Ya está en mi biblioteca»): responde 200, no 201.
@@ -46,6 +54,7 @@ export async function saveRepository(
     const data = await getGitHubProvider().fetchRepository(ref.owner, ref.name)
     repositoryId = await upsertRepository(db, data)
   }
+  await requestAnalysis(db, repositoryId, false)
 
   const inserted = await db
     .insert(userRepositories)
@@ -85,14 +94,97 @@ async function upsertRepository(db: Database, data: GitHubRepositoryData): Promi
     })
     .returning({ id: repositories.id })
   if (!row) throw new Error('el alta del repositorio no devolvió la fila')
+  return row.id
+}
 
-  const aiEnabled = readEnv().AI_ANALYSIS_ENABLED
+/**
+ * Pide el análisis de un repositorio global si hace falta (ADR-0009): con la
+ * IA apagada, `DISABLED` y nada en cola; con un análisis vigente y sin
+ * forzar, nada; si no, `ANALYZE_REPOSITORY` en la cola, que es idempotente.
+ * Un análisis completado sigue `COMPLETED` mientras llega el nuevo: el
+ * anterior se conserva hasta que termine (specs/ai · «Repositorio que
+ * cambió»).
+ *
+ * Forzar caduca el análisis vigente antes de encolar. La cola admite un solo
+ * trabajo activo por repositorio, así que si ya hay uno en cola o en curso no
+ * se encola otro: ese trabajo vuelve a mirar la caché, la encuentra caducada
+ * y rehace el análisis. Sin caducarlo, un trabajo ya tomado por el worker
+ * respondería «vigente» y el forzado se perdería en silencio.
+ *
+ * @returns si al terminar hay un análisis en camino.
+ */
+async function requestAnalysis(
+  db: Database,
+  repositoryId: string,
+  force: boolean,
+): Promise<boolean> {
+  if (!readEnv().AI_ANALYSIS_ENABLED) {
+    await db
+      .insert(repositoryAnalyses)
+      .values({ repositoryId, status: 'DISABLED' })
+      .onConflictDoNothing()
+    return false
+  }
+  const [row] = await db
+    .select({
+      githubPushedAt: repositories.githubPushedAt,
+      status: repositoryAnalyses.status,
+      aiAnalyzedAt: repositoryAnalyses.aiAnalyzedAt,
+      expiresAt: repositoryAnalyses.expiresAt,
+    })
+    .from(repositories)
+    .leftJoin(repositoryAnalyses, eq(repositoryAnalyses.repositoryId, repositories.id))
+    .where(eq(repositories.id, repositoryId))
+    .limit(1)
+  const cached = row?.status
+    ? { status: row.status, aiAnalyzedAt: row.aiAnalyzedAt, expiresAt: row.expiresAt }
+    : null
+  if (!analysisStaleReason(cached, { githubPushedAt: row?.githubPushedAt ?? null }, { force })) {
+    return false
+  }
+
+  const now = new Date()
   await db
     .insert(repositoryAnalyses)
-    .values({ repositoryId: row.id, status: aiEnabled ? 'PENDING' : 'DISABLED' })
-    .onConflictDoNothing()
-  if (aiEnabled) await enqueueJob('ANALYZE_REPOSITORY', row.id)
-  return row.id
+    .values({ repositoryId, status: 'PENDING' })
+    .onConflictDoUpdate({
+      target: repositoryAnalyses.repositoryId,
+      set: {
+        status: sql`case when ${repositoryAnalyses.status} = 'COMPLETED' then 'COMPLETED' else 'PENDING' end`,
+        ...(force ? { expiresAt: now } : {}),
+        updatedAt: now,
+      },
+    })
+  await enqueueJob('ANALYZE_REPOSITORY', repositoryId, force ? { force: true } : {}, db)
+  return true
+}
+
+/**
+ * specs/ai · «La IA nunca impide guardar» (reintentar) y «Un análisis por
+ * repositorio» (forzar), sobre un repositorio de **mi** biblioteca. Un id de
+ * otra cuenta es 404, igual que uno que no existe. El análisis es del
+ * repositorio global: lo que se pide aquí lo verán todas las cuentas que lo
+ * tengan, y nadie sabrá quién lo pidió.
+ *
+ * @returns `enqueued: false` si no hacía falta (vigente y sin forzar) o si la
+ *   IA está apagada.
+ */
+export async function requestRepositoryAnalysis(
+  userId: string,
+  id: string,
+  body: AnalysisRequestBody,
+): Promise<{ item: UserRepository; enqueued: boolean }> {
+  const db = getDb()
+  const [relation] = await db
+    .select({ repositoryId: userRepositories.repositoryId })
+    .from(userRepositories)
+    .where(and(eq(userRepositories.userId, userId), eq(userRepositories.id, id)))
+    .limit(1)
+  if (!relation) throw new NotFoundError()
+  const enqueued = await requestAnalysis(db, relation.repositoryId, body.force === true)
+  const item = await getUserRepository(userId, { id })
+  if (!item) throw new NotFoundError()
+  return { item, enqueued }
 }
 
 const itemColumns = {
@@ -134,11 +226,20 @@ const itemColumns = {
     summary: repositoryAnalyses.summary,
     purpose: repositoryAnalyses.purpose,
     mainUseCases: repositoryAnalyses.mainUseCases,
+    installationSummary: repositoryAnalyses.installationSummary,
+    deploymentType: repositoryAnalyses.deploymentType,
+    frameworks: repositoryAnalyses.frameworks,
+    maturity: repositoryAnalyses.maturity,
+    advantages: repositoryAnalyses.advantages,
+    limitations: repositoryAnalyses.limitations,
+    targetUsers: repositoryAnalyses.targetUsers,
+    activityAssessment: repositoryAnalyses.activityAssessment,
     abandonmentRisk: repositoryAnalyses.abandonmentRisk,
     aiAnalyzedAt: repositoryAnalyses.aiAnalyzedAt,
   },
 }
 
+type Analysis = UserRepository['repository']['analysis']
 type Row = {
   id: string
   personal: {
@@ -166,19 +267,34 @@ type Row = {
     latestReleaseAt: Date | null
     metadataRefreshedAt: Date
   }
+  // Con left join, cada columna puede venir null aunque en la tabla no lo sea.
   analysis: {
-    status: UserRepository['repository']['analysis']['status'] | null
+    status: Analysis['status'] | null
     summary: string | null
     purpose: string | null
     mainUseCases: string[] | null
-    abandonmentRisk: UserRepository['repository']['analysis']['abandonmentRisk'] | null
+    installationSummary: string | null
+    deploymentType: string[] | null
+    frameworks: string[] | null
+    maturity: string | null
+    advantages: string[] | null
+    limitations: string[] | null
+    targetUsers: string[] | null
+    activityAssessment: string | null
+    abandonmentRisk: Analysis['abandonmentRisk'] | null
     aiAnalyzedAt: Date | null
   }
 }
 
 const iso = (d: Date | null) => (d ? d.toISOString() : null)
 
-function toItem(row: Row): UserRepository {
+function toItem(row: Row, categoryList: Category[], tagList: string[]): UserRepository {
+  const a = row.analysis
+  const status = a.status ?? 'PENDING'
+  const risk = abandonmentAssessment(
+    { archived: row.repository.archived, githubPushedAt: row.repository.githubPushedAt },
+    status === 'COMPLETED' ? a.abandonmentRisk : null,
+  )
   return {
     id: row.id,
     repository: {
@@ -189,15 +305,24 @@ function toItem(row: Row): UserRepository {
       latestReleaseAt: iso(row.repository.latestReleaseAt),
       metadataRefreshedAt: row.repository.metadataRefreshedAt.toISOString(),
       analysis: {
-        status: row.analysis.status ?? 'PENDING',
-        summary: row.analysis.summary,
-        purpose: row.analysis.purpose,
-        mainUseCases: row.analysis.mainUseCases ?? [],
-        abandonmentRisk: row.analysis.abandonmentRisk,
-        aiAnalyzedAt: iso(row.analysis.aiAnalyzedAt),
+        status,
+        summary: a.summary,
+        purpose: a.purpose,
+        mainUseCases: a.mainUseCases ?? [],
+        installationSummary: a.installationSummary,
+        deploymentType: a.deploymentType ?? [],
+        frameworks: a.frameworks ?? [],
+        maturity: a.maturity,
+        advantages: a.advantages ?? [],
+        limitations: a.limitations ?? [],
+        targetUsers: a.targetUsers ?? [],
+        activityAssessment: a.activityAssessment,
+        tags: tagList,
+        abandonmentRisk: risk.risk,
+        abandonmentRiskSource: risk.source,
+        aiAnalyzedAt: iso(a.aiAnalyzedAt),
       },
-      // Las categorías llegan con H4 (RGM-5): hasta entonces, ninguna.
-      categories: [],
+      categories: categoryList,
     },
     personal: {
       ...row.personal,
@@ -206,6 +331,40 @@ function toItem(row: Row): UserRepository {
       updatedAt: row.personal.updatedAt.toISOString(),
     },
   }
+}
+
+/** Filas a items, con las categorías y los tags de IA de cada repositorio en dos consultas. */
+async function toItems(db: Database, rows: Row[]): Promise<UserRepository[]> {
+  const ids = [...new Set(rows.map((r) => r.repository.id))]
+  if (!ids.length) return []
+  const [categoryRows, tagRows] = await Promise.all([
+    db
+      .select({
+        repositoryId: repositoryCategories.repositoryId,
+        slug: categories.slug,
+        name: categories.name,
+        path: categories.path,
+      })
+      .from(repositoryCategories)
+      .innerJoin(categories, eq(categories.id, repositoryCategories.categoryId))
+      .where(inArray(repositoryCategories.repositoryId, ids))
+      .orderBy(categories.path),
+    db
+      .select({ repositoryId: repositoryTags.repositoryId, slug: tags.slug })
+      .from(repositoryTags)
+      .innerJoin(tags, eq(tags.id, repositoryTags.tagId))
+      .where(and(inArray(repositoryTags.repositoryId, ids), eq(tags.kind, 'AI')))
+      .orderBy(tags.slug),
+  ])
+  return rows.map((row) =>
+    toItem(
+      row,
+      categoryRows
+        .filter((c) => c.repositoryId === row.repository.id)
+        .map(({ slug, name, path }) => ({ slug, name, path })),
+      tagRows.filter((t) => t.repositoryId === row.repository.id).map((t) => t.slug),
+    ),
+  )
 }
 
 function baseQuery(db: Database) {
@@ -229,8 +388,10 @@ export async function getUserRepository(
     'id' in by
       ? and(eq(userRepositories.userId, userId), eq(userRepositories.id, by.id))
       : and(eq(userRepositories.userId, userId), eq(userRepositories.repositoryId, by.repositoryId))
-  const [row] = await baseQuery(getDb()).where(where).limit(1)
-  return row ? toItem(row as Row) : null
+  const db = getDb()
+  const rows = await baseQuery(db).where(where).limit(1)
+  const [item] = await toItems(db, rows as Row[])
+  return item ?? null
 }
 
 /**
@@ -299,12 +460,19 @@ const sortColumn = {
   rating: userRepositories.rating,
 } as const
 
+export const UNKNOWN_CATEGORY = {
+  field: 'category',
+  rule: 'category',
+  message: 'No es una categoría del catálogo',
+} as const
+
 /**
  * specs/library · «Lista con orden y filtros» y «Biblioteca vacía». Solo las
  * relaciones de la cuenta con sesión. Los valores de orden y filtro ya
  * vienen validados por `libraryQuerySchema`: un valor fuera del dominio es un
  * 422 antes de llegar aquí (ADR-0005), y un parámetro desconocido también.
- * El filtro por categoría entra con H4, en el esquema y aquí a la vez (H-08).
+ * `category` filtra por la rama entera del catálogo, y un slug que el
+ * catálogo no conoce es 422 sobre `category`, no una lista vacía (H-08).
  */
 export async function listUserRepositories(
   userId: string,
@@ -319,6 +487,20 @@ export async function listUserRepositories(
   if (query.license)
     conditions.push(sql`lower(${repositories.license}) = ${query.license.toLowerCase()}`)
   if (query.minStars !== undefined) conditions.push(gte(repositories.stars, query.minStars))
+  if (query.category) {
+    const [category] = await db
+      .select({ path: categories.path })
+      .from(categories)
+      .where(eq(categories.slug, query.category))
+      .limit(1)
+    if (!category) throw new ValidationError([UNKNOWN_CATEGORY])
+    conditions.push(sql`exists (
+      select 1 from ${repositoryCategories}
+      inner join ${categories} on ${categories.id} = ${repositoryCategories.categoryId}
+      where ${repositoryCategories.repositoryId} = ${repositories.id}
+        and (${categories.path} = ${category.path} or ${categories.path} like ${`${category.path}/%`})
+    )`)
+  }
   const where = and(...conditions)
 
   const column = sortColumn[query.sort]
@@ -337,7 +519,36 @@ export async function listUserRepositories(
       .where(where),
   ])
   return {
-    items: (rows as Row[]).map(toItem),
+    items: await toItems(db, rows as Row[]),
     meta: { total: count?.total ?? 0, page: query.page, pageSize: query.pageSize },
   }
+}
+
+/**
+ * Las categorías que aparecen en **mi** biblioteca, con sus antecesoras para
+ * poder filtrar por rama, ordenadas por jerarquía. Es lo que ofrece el filtro
+ * de la pantalla: una lista de setenta categorías vacías no ayuda a nadie.
+ */
+export async function listLibraryCategories(userId: string): Promise<Category[]> {
+  const db = getDb()
+  const used = await db
+    .selectDistinct({ path: categories.path })
+    .from(repositoryCategories)
+    .innerJoin(categories, eq(categories.id, repositoryCategories.categoryId))
+    .innerJoin(
+      userRepositories,
+      eq(userRepositories.repositoryId, repositoryCategories.repositoryId),
+    )
+    .where(eq(userRepositories.userId, userId))
+  if (!used.length) return []
+  const paths = new Set(
+    used.flatMap(({ path }) =>
+      path.split('/').map((_, i, parts) => parts.slice(0, i + 1).join('/')),
+    ),
+  )
+  return db
+    .select({ slug: categories.slug, name: categories.name, path: categories.path })
+    .from(categories)
+    .where(inArray(categories.path, [...paths]))
+    .orderBy(categories.path)
 }

@@ -5,14 +5,17 @@ import { chromium, devices } from '@playwright/test'
 
 /**
  * Capturas de pantalla para `docs/evidencia/` (sección 1.3 del readme de
- * LIDR). Recorre el flujo real contra un servidor ya levantado con la base
- * de pruebas y GitHub falso, y guarda cada pantalla a móvil y a escritorio.
+ * LIDR). Recorre el flujo real contra un servidor de producción ya levantado
+ * (sin la insignia del servidor de desarrollo), con GitHub y la IA falsos y
+ * el worker en marcha, y guarda cada pantalla a móvil y a escritorio.
  *
- * Uso, contra la imagen de producción (sin la insignia del servidor de
- * desarrollo), con la base de desarrollo migrada y GitHub falso:
- *   docker run --rm -d -p 3006:3000 -e DATABASE_URL=postgres://rgm:rgm@host.docker.internal:5434/repogithubmind  *     -e AUTH_SECRET=<32 caracteres> -e AUTH_URL=http://localhost:3006 -e GITHUB_FAKE=1 \
- *     -e AI_ANALYSIS_ENABLED=false repogithubmind-web
- *   pnpm exec tsx scripts/capturas.ts http://localhost:3006
+ * Uso, con las mismas variables en la web y el worker (DATABASE_URL de una
+ * base migrada, AUTH_SECRET, GITHUB_FAKE=1, AI_ANALYSIS_ENABLED=true,
+ * AI_FAKE=1):
+ *   apps/web:    pnpm build && pnpm exec next start -p 3006
+ *                (o la imagen de producción: docker run ... repogithubmind-web)
+ *   apps/worker: pnpm exec tsx src/index.ts
+ *   apps/web:    pnpm exec tsx scripts/capturas.ts http://localhost:3006
  */
 const base = process.argv[2] ?? 'http://localhost:3002'
 const out = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'docs', 'evidencia')
@@ -29,7 +32,7 @@ for (const [nombre, contexto] of [
   const email = `capturas-${nombre}-${Date.now()}@example.com`
   // Se espera a que React termine de hidratar: capturar antes hace que
   // Playwright toque el DOM a mitad y el servidor de desarrollo lo marque
-  // como error. Las capturas se hacen contra la imagen de producción.
+  // como error. Las capturas se hacen contra un servidor de producción.
   // En móvil se captura lo que cabe en la pantalla del teléfono: una captura
   // de página completa pinta la navegación inferior fija a mitad de la
   // imagen, encima de una tarjeta, y eso no lo ve nadie en un teléfono.
@@ -59,6 +62,13 @@ for (const [nombre, contexto] of [
     await page.getByRole('button', { name: 'Guardar' }).click()
     await page.getByRole('status').waitFor()
   }
+  // El worker analiza y la biblioteca se relee sola: se espera a que no quede
+  // ningún resumen en camino.
+  await page.waitForFunction(
+    () => !document.body.innerText.includes('Resumen de IA en camino'),
+    null,
+    { timeout: 60_000 },
+  )
   // Cada cambio se espera hasta que el servidor responda: navegar antes lo
   // cancelaría y la captura del filtro saldría vacía.
   const primera = page.getByTestId('repository-card').first()
@@ -73,6 +83,10 @@ for (const [nombre, contexto] of [
   await page.goto(`${base}/library?status=USING`)
   await page.getByTestId('repository-card').first().waitFor()
   await foto('04-biblioteca-filtrada')
+
+  await page.goto(`${base}/library?category=artificial-intelligence`)
+  await page.getByTestId('repository-card').first().waitFor()
+  await foto('07-biblioteca-por-categoria')
 
   await page.goto(`${base}/library`)
   await page.getByRole('link', { name: 'pgvector / pgvector' }).click()

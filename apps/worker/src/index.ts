@@ -1,6 +1,7 @@
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { config } from 'dotenv'
+import { getAIProvider } from '@rgm/ai'
 import { closeDb, purgeExpiredSessions } from '@rgm/db'
 import { readEnv } from '@rgm/shared'
 import { processNextJob } from './jobs'
@@ -11,12 +12,27 @@ import { processNextJob } from './jobs'
  * Cada `PURGE_MS` borra las sesiones caducadas (ADR-0013). Arranca con el
  * `.env` de la raíz si existe; en el contenedor las variables llegan del
  * entorno y `dotenv` no las pisa.
+ *
+ * Con la IA activa, el proveedor se elige al arrancar: un `AI_PROVIDER`
+ * desconocido o sin clave para el proceso con un mensaje claro, en vez de
+ * fallar en la primera llamada (specs/ai · «Proveedor desconocido»).
  */
 const POLL_MS = 2_000
 const PURGE_MS = 60 * 60 * 1000
 
 config({ path: join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '.env') })
 const env = readEnv()
+
+let ai = 'apagada'
+if (env.AI_ANALYSIS_ENABLED) {
+  try {
+    const provider = getAIProvider()
+    ai = `activa con ${provider.name} (${provider.model})`
+  } catch (error) {
+    console.error(`worker: no arranca. ${error instanceof Error ? error.message : String(error)}`)
+    process.exit(1)
+  }
+}
 
 let stopping = false
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
@@ -28,7 +44,7 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 async function loop(): Promise<void> {
-  console.log(`worker: escuchando la cola (IA ${env.AI_ANALYSIS_ENABLED ? 'activa' : 'apagada'})`)
+  console.log(`worker: escuchando la cola (IA ${ai})`)
   let nextPurge = 0
   while (!stopping) {
     if (Date.now() >= nextPurge) {

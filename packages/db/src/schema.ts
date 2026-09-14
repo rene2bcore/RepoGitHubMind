@@ -5,13 +5,16 @@ import {
   index,
   integer,
   jsonb,
+  numeric,
   pgTable,
+  primaryKey,
   real,
   smallint,
   text,
   timestamp,
   uniqueIndex,
   uuid,
+  type AnyPgColumn,
 } from 'drizzle-orm/pg-core'
 
 /**
@@ -250,5 +253,122 @@ export const backgroundJobs = pgTable(
     uniqueIndex('background_jobs_active_unique')
       .on(t.type, t.repositoryId)
       .where(sql`${t.status} in ('QUEUED', 'PROCESSING')`),
+  ],
+)
+
+// ---------------------------------------------------------------------------
+// H4 · taxonomía controlada, tags y uso de IA (docs/taxonomy.md, ADR-0009)
+// ---------------------------------------------------------------------------
+
+export const CATEGORY_ORIGIN_VALUES = ['AI', 'ADMIN'] as const
+export const TAG_KIND_VALUES = ['AI', 'GITHUB_TOPIC'] as const
+export const AI_OPERATION_VALUES = ['ANALYSIS', 'EMBEDDING'] as const
+
+/**
+ * El catálogo controlado y jerárquico. Lo escribe el seed desde
+ * `src/taxonomy.ts`, nunca la IA: una sugerencia que no mapea va a `tags`.
+ * `path` son los slugs de la raíz a la hoja y es lo que permite filtrar por
+ * una rama entera; `synonyms` alimenta el mapeador.
+ */
+export const categories = pgTable(
+  'categories',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    parentId: uuid('parent_id').references((): AnyPgColumn => categories.id, {
+      onDelete: 'restrict',
+    }),
+    slug: text('slug').notNull(),
+    name: text('name').notNull(),
+    path: text('path').notNull(),
+    depth: integer('depth').notNull(),
+    synonyms: textArray('synonyms'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('categories_slug_unique').on(t.slug),
+    uniqueIndex('categories_path_unique').on(t.path),
+  ],
+)
+
+/**
+ * Un repositorio en una categoría. `origin = AI` lo escribe el análisis y se
+ * reemplaza al reanalizar; `ADMIN` (roadmap) gana y el análisis no lo toca.
+ */
+export const repositoryCategories = pgTable(
+  'repository_categories',
+  {
+    repositoryId: uuid('repository_id')
+      .notNull()
+      .references(() => repositories.id, { onDelete: 'cascade' }),
+    categoryId: uuid('category_id')
+      .notNull()
+      .references(() => categories.id, { onDelete: 'cascade' }),
+    origin: text('origin', { enum: CATEGORY_ORIGIN_VALUES }).notNull(),
+    confidence: real('confidence'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.repositoryId, t.categoryId] }),
+    index('repository_categories_category_idx').on(t.categoryId),
+  ],
+)
+
+/** Tags de IA y, más adelante, topics de GitHub: el mismo slug puede ser de los dos tipos. */
+export const tags = pgTable(
+  'tags',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    slug: text('slug').notNull(),
+    kind: text('kind', { enum: TAG_KIND_VALUES }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('tags_kind_slug_unique').on(t.kind, t.slug)],
+)
+
+export const repositoryTags = pgTable(
+  'repository_tags',
+  {
+    repositoryId: uuid('repository_id')
+      .notNull()
+      .references(() => repositories.id, { onDelete: 'cascade' }),
+    tagId: uuid('tag_id')
+      .notNull()
+      .references(() => tags.id, { onDelete: 'cascade' }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.repositoryId, t.tagId] }),
+    index('repository_tags_tag_idx').on(t.tagId),
+  ],
+)
+
+/**
+ * Una fila por llamada al proveedor, también las que fallan o devuelven una
+ * salida que no valida (specs/ai · «Todo uso se registra»). `estimated_cost`
+ * es el que declara el proveedor, o null si no lo declara: no se inventa.
+ * `unmapped_categories` guarda las sugerencias que el catálogo no conoce,
+ * para revisarlo con datos (docs/taxonomy.md). La fila sobrevive al
+ * repositorio: el coste ya se pagó.
+ */
+export const aiUsage = pgTable(
+  'ai_usage',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    repositoryId: uuid('repository_id').references(() => repositories.id, {
+      onDelete: 'set null',
+    }),
+    provider: text('provider').notNull(),
+    model: text('model').notNull(),
+    operation: text('operation', { enum: AI_OPERATION_VALUES }).notNull(),
+    inputTokens: integer('input_tokens').notNull().default(0),
+    outputTokens: integer('output_tokens').notNull().default(0),
+    estimatedCost: numeric('estimated_cost', { precision: 12, scale: 8, mode: 'number' }),
+    success: boolean('success').notNull(),
+    error: text('error'),
+    unmappedCategories: textArray('unmapped_categories'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('ai_usage_repository_idx').on(t.repositoryId),
+    index('ai_usage_created_at_idx').on(t.createdAt),
   ],
 )
