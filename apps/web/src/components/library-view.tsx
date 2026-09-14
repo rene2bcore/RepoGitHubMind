@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState, type FormEvent } from 'react'
+import { Search } from 'lucide-react'
 import type { Category, LibraryQuery, UserRepository } from '@rgm/shared'
 import { ApiError, api } from '@/lib/api'
 import { AnalysisPoller } from '@/components/analysis-status'
@@ -95,6 +96,27 @@ export function LibraryView({
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
+      {/* La biblioteca es la pantalla de inicio (specs/auth) y el buscador es
+          lo primero que se ve en ella (specs/search · CA-4). Formulario GET
+          nativo: lleva a /search?q= con o sin JavaScript. */}
+      <form role="search" action="/search" method="get" className="mb-6 flex gap-2">
+        <label htmlFor="inicio-q" className="sr-only">
+          Buscar en tus repositorios
+        </label>
+        <input
+          id="inicio-q"
+          name="q"
+          type="search"
+          required
+          minLength={2}
+          autoComplete="off"
+          placeholder="¿Qué tipo de herramienta necesitas?"
+          className="min-h-12 min-w-0 flex-1 rounded-lg border border-border bg-card px-4 text-base outline-none focus:ring-2 focus:ring-accent sm:text-lg"
+        />
+        <Button type="submit" className="min-h-12 gap-2" aria-label="Buscar">
+          <Search size={18} aria-hidden /> <span className="hidden sm:inline">Buscar</span>
+        </Button>
+      </form>
       <h1 className="mb-6 text-2xl font-semibold">Tu biblioteca</h1>
       <AnalysisPoller pending={items.some((i) => i.repository.analysis.status === 'PENDING')} />
 

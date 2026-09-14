@@ -34,8 +34,16 @@ test('registrarse, guardar un repositorio por URL, anotarlo, salir y volver a en
   await page.getByLabel('Repite la contraseña').fill('secreto123')
   await page.getByRole('button', { name: 'Crear cuenta' }).click()
 
-  // 3. Entra directa a la biblioteca vacía, que explica qué es.
+  // 3. Entra directa a la biblioteca vacía, que explica qué es, con el
+  // buscador como lo primero de la pantalla (specs/search · CA-4).
   await expect(page).toHaveURL(/\/library$/)
+  const buscadorInicio = page
+    .getByRole('search')
+    .getByPlaceholder('¿Qué tipo de herramienta necesitas?')
+  await expect(buscadorInicio).toBeVisible()
+  const cajaBuscador = await buscadorInicio.boundingBox()
+  const cajaTitulo = await page.getByRole('heading', { name: 'Tu biblioteca' }).boundingBox()
+  expect(cajaBuscador!.y).toBeLessThan(cajaTitulo!.y)
   await expect(page.getByRole('heading', { name: 'Tu biblioteca' })).toBeVisible()
   await expect(page.getByText('Todavía no has guardado ningún repositorio')).toBeVisible()
 
@@ -131,6 +139,19 @@ test('registrarse, guardar un repositorio por URL, anotarlo, salir y volver a en
     page.getByText('Orden o filtro no válido (status: Este parámetro solo puede venir una vez'),
   ).toBeVisible()
   await expect(page.getByTestId('repository-card')).toHaveCount(2)
+
+  // H5 · CA-4: desde el buscador de la pantalla de inicio se llega a la búsqueda.
+  await page.goto('/library')
+  await page
+    .getByRole('search')
+    .getByPlaceholder('¿Qué tipo de herramienta necesitas?')
+    .fill('vectores en postgres')
+  await page
+    .getByRole('search')
+    .getByPlaceholder('¿Qué tipo de herramienta necesitas?')
+    .press('Enter')
+  await expect(page).toHaveURL(/\/search\?q=vectores\+en\+postgres$/)
+  await expect(page.getByTestId('search-result').first()).toContainText('pgvector / pgvector')
 
   // H5: el buscador es lo primero de la búsqueda y encuentra lo guardado
   // preguntando con otras palabras; cada resultado dice por qué aparece.
