@@ -1,0 +1,46 @@
+# Dependencias
+node_modules/
+**/node_modules/
+.venv/
+__pycache__/
+
+# Builds
+**/dist/
+**/build/
+**/target/
+
+# Entornos. Los .env.example sí se versionan, y sin valores reales.
+.env
+.env.local
+**/.env
+**/.env.local
+!**/.env.example
+
+# Bases de datos locales y temporales
+**/tmp/*
+!**/tmp/.gitkeep
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+
+# Cobertura, logs y trazas de pruebas
+coverage/
+*.log
+**/test-results/
+**/playwright-report/
+
+# SO / editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Configuración local de Claude Code: la de cada máquina, no la del proyecto
+.claude/settings.local.json
+
+# Planes de sesión y notas propias: material de trabajo, no documentación
+# del producto. No viajan con el repositorio.
+docs/plans/
+
+# Herramienta local de configuracion: no es parte del producto
+core-harness/
