@@ -90,7 +90,7 @@ Construida el 2026-09-14 en `feat/RGM-6-busqueda-hibrida`, en un solo PR y un co
 
 - [x] CA-1, CA-2, CA-3, CA-5, CA-6, CA-7 y CA-8 con prueba de integración contra la base de pruebas y el worker real con los proveedores falsos; CA-2 y CA-3 también en el navegador
 - [x] CA-9 validado contra la spec y probado en la unidad y en el worker, sin fila nueva en `ai_usage`
-- [ ] CA-4 en la pantalla de inicio: el buscador es lo primero de `/search`, pero al entrar se llega a la biblioteca, como exige `specs/auth`; punto abierto en `traceability.md` §3
+- [x] CA-4 en la pantalla de inicio: la biblioteca, a la que se llega al entrar (`specs/auth`), lleva el buscador con «¿Qué tipo de herramienta necesitas?» antes que nada, y lleva a `/search?q=`; `flujo.e2e.ts` comprueba que está por encima del título y que busca
 - [ ] «Consulta en lenguaje natural» (los de `agent-memory` antes que otros) sin prueba: el proveedor falso no sabe de sinónimos y ninguna prueba usa la clave real
 - [x] Ninguna prueba llama a la red; una sola llamada manual con la clave real, contada en el PR y en `ai-architecture.md`
 - [x] Mutaciones `busqueda-global-privada` y `busqueda-biblioteca-privada` en el catálogo, vistas morder en la prueba de dos cuentas
