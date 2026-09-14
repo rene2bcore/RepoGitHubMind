@@ -61,9 +61,27 @@ export async function parseBody<S extends z.ZodType>(
   return result.data
 }
 
-/** Los parámetros de la query validados con Zod. */
+/**
+ * Los parámetros de la query validados con Zod. Un parámetro repetido es 422:
+ * `?license=MIT&license=Apache-2.0` se quedaría en silencio con el último, y
+ * un filtro que no filtra lo que dice no se acepta (H-08). Varias licencias
+ * van en un solo parámetro, separadas por comas.
+ */
 export function parseQuery<S extends z.ZodType>(req: Request, schema: S): z.output<S> {
-  const params = Object.fromEntries(new URL(req.url).searchParams.entries())
+  const searchParams = new URL(req.url).searchParams
+  const repeated = [...new Set(searchParams.keys())].filter(
+    (key) => searchParams.getAll(key).length > 1,
+  )
+  if (repeated.length) {
+    throw new ValidationError(
+      repeated.map((field) => ({
+        field,
+        rule: 'repeated',
+        message: 'Este parámetro solo puede venir una vez',
+      })),
+    )
+  }
+  const params = Object.fromEntries(searchParams.entries())
   const result = schema.safeParse(params)
   if (!result.success) throw new ValidationError(zodToErrors(result.error))
   return result.data

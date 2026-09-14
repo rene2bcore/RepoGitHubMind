@@ -13,6 +13,7 @@ import {
   type Database,
 } from '@rgm/db'
 import { getGitHubProvider, type GitHubRepositoryData } from '@rgm/github'
+import { refreshSearchVector } from '@rgm/search'
 import {
   NotFoundError,
   ValidationError,
@@ -22,7 +23,9 @@ import {
   type Category,
   type LibraryQuery,
   type ListMeta,
+  type Personal,
   type PersonalUpdateBody,
+  type Repository,
   type SaveRepositoryBody,
   type UserRepository,
   type UserRepositoryDetail,
@@ -53,6 +56,9 @@ export async function saveRepository(
   if (!repositoryId) {
     const data = await getGitHubProvider().fetchRepository(ref.owner, ref.name)
     repositoryId = await upsertRepository(db, data)
+    // Buscable por coincidencia léxica desde ya, sin esperar a la IA
+    // (specs/search · «Sin embedding todavía»).
+    await refreshSearchVector(db, repositoryId)
   }
   await requestAnalysis(db, repositoryId, false)
 
@@ -288,55 +294,136 @@ type Row = {
 
 const iso = (d: Date | null) => (d ? d.toISOString() : null)
 
-function toItem(row: Row, categoryList: Category[], tagList: string[]): UserRepository {
-  const a = row.analysis
+function toRepository(
+  repository: Row['repository'],
+  // Drizzle devuelve null el objeto entero de una tabla de left join sin fila.
+  analysis: Partial<Row['analysis']> | null,
+  categoryList: Category[],
+  tagList: string[],
+): Repository {
+  const a = analysis ?? {}
   const status = a.status ?? 'PENDING'
   const risk = abandonmentAssessment(
-    { archived: row.repository.archived, githubPushedAt: row.repository.githubPushedAt },
-    status === 'COMPLETED' ? a.abandonmentRisk : null,
+    { archived: repository.archived, githubPushedAt: repository.githubPushedAt },
+    status === 'COMPLETED' ? (a.abandonmentRisk ?? null) : null,
   )
   return {
+    ...repository,
+    githubCreatedAt: iso(repository.githubCreatedAt),
+    githubUpdatedAt: iso(repository.githubUpdatedAt),
+    githubPushedAt: iso(repository.githubPushedAt),
+    latestReleaseAt: iso(repository.latestReleaseAt),
+    metadataRefreshedAt: repository.metadataRefreshedAt.toISOString(),
+    analysis: {
+      status,
+      summary: a.summary ?? null,
+      purpose: a.purpose ?? null,
+      mainUseCases: a.mainUseCases ?? [],
+      installationSummary: a.installationSummary ?? null,
+      deploymentType: a.deploymentType ?? [],
+      frameworks: a.frameworks ?? [],
+      maturity: a.maturity ?? null,
+      advantages: a.advantages ?? [],
+      limitations: a.limitations ?? [],
+      targetUsers: a.targetUsers ?? [],
+      activityAssessment: a.activityAssessment ?? null,
+      tags: tagList,
+      abandonmentRisk: risk.risk,
+      abandonmentRiskSource: risk.source,
+      aiAnalyzedAt: iso(a.aiAnalyzedAt ?? null),
+    },
+    categories: categoryList,
+  }
+}
+
+function toPersonal(personal: Row['personal']): Personal {
+  return {
+    ...personal,
+    savedAt: personal.savedAt.toISOString(),
+    reviewedAt: iso(personal.reviewedAt),
+    updatedAt: personal.updatedAt.toISOString(),
+  }
+}
+
+function toItem(row: Row, categoryList: Category[], tagList: string[]): UserRepository {
+  return {
     id: row.id,
-    repository: {
-      ...row.repository,
-      githubCreatedAt: iso(row.repository.githubCreatedAt),
-      githubUpdatedAt: iso(row.repository.githubUpdatedAt),
-      githubPushedAt: iso(row.repository.githubPushedAt),
-      latestReleaseAt: iso(row.repository.latestReleaseAt),
-      metadataRefreshedAt: row.repository.metadataRefreshedAt.toISOString(),
-      analysis: {
-        status,
-        summary: a.summary,
-        purpose: a.purpose,
-        mainUseCases: a.mainUseCases ?? [],
-        installationSummary: a.installationSummary,
-        deploymentType: a.deploymentType ?? [],
-        frameworks: a.frameworks ?? [],
-        maturity: a.maturity,
-        advantages: a.advantages ?? [],
-        limitations: a.limitations ?? [],
-        targetUsers: a.targetUsers ?? [],
-        activityAssessment: a.activityAssessment,
-        tags: tagList,
-        abandonmentRisk: risk.risk,
-        abandonmentRiskSource: risk.source,
-        aiAnalyzedAt: iso(a.aiAnalyzedAt),
-      },
-      categories: categoryList,
-    },
-    personal: {
-      ...row.personal,
-      savedAt: row.personal.savedAt.toISOString(),
-      reviewedAt: iso(row.personal.reviewedAt),
-      updatedAt: row.personal.updatedAt.toISOString(),
-    },
+    repository: toRepository(row.repository, row.analysis, categoryList, tagList),
+    personal: toPersonal(row.personal),
   }
 }
 
 /** Filas a items, con las categorías y los tags de IA de cada repositorio en dos consultas. */
 async function toItems(db: Database, rows: Row[]): Promise<UserRepository[]> {
-  const ids = [...new Set(rows.map((r) => r.repository.id))]
-  if (!ids.length) return []
+  const labels = await categoriesAndTags(
+    db,
+    rows.map((r) => r.repository.id),
+  )
+  return rows.map((row) =>
+    toItem(row, labels.categories(row.repository.id), labels.tags(row.repository.id)),
+  )
+}
+
+/**
+ * Los repositorios de una búsqueda, en el orden de `repositoryIds`, cada uno
+ * con **mi** relación si está en mi biblioteca (specs/search · «Ámbitos y
+ * privacidad»). El cruce con `user_repositories` lleva la cuenta de la
+ * sesión en la propia condición del join: sin ella, un repositorio guardado
+ * por otras cuentas traería su estado, sus notas y su rating, una fila por
+ * cada una. `id` y `personal` son null si no está en mi biblioteca.
+ */
+export async function loadSearchItems(
+  userId: string,
+  repositoryIds: string[],
+): Promise<{ id: string | null; repository: Repository; personal: Personal | null }[]> {
+  if (!repositoryIds.length) return []
+  const db = getDb()
+  const [rows, labels] = await Promise.all([
+    db
+      .select(itemColumns)
+      .from(repositories)
+      .leftJoin(repositoryAnalyses, eq(repositoryAnalyses.repositoryId, repositories.id))
+      .leftJoin(
+        userRepositories,
+        and(
+          eq(userRepositories.repositoryId, repositories.id),
+          eq(userRepositories.userId, userId),
+        ),
+      )
+      .where(inArray(repositories.id, repositoryIds)),
+    categoriesAndTags(db, repositoryIds),
+  ])
+  const byId = new Map(
+    (
+      rows as unknown as (Omit<Row, 'id' | 'personal'> & {
+        id: string | null
+        personal: Row['personal'] | null
+      })[]
+    ).map((row) => [row.repository.id, row]),
+  )
+  return repositoryIds.flatMap((repositoryId) => {
+    const row = byId.get(repositoryId)
+    if (!row) return []
+    return [
+      {
+        id: row.id,
+        repository: toRepository(
+          row.repository,
+          row.analysis,
+          labels.categories(repositoryId),
+          labels.tags(repositoryId),
+        ),
+        personal: row.personal ? toPersonal(row.personal) : null,
+      },
+    ]
+  })
+}
+
+/** Las categorías y los tags de IA de varios repositorios, en dos consultas. */
+async function categoriesAndTags(db: Database, repositoryIds: string[]) {
+  const ids = [...new Set(repositoryIds)]
+  const none = { categories: (): Category[] => [], tags: (): string[] => [] }
+  if (!ids.length) return none
   const [categoryRows, tagRows] = await Promise.all([
     db
       .select({
@@ -356,15 +443,14 @@ async function toItems(db: Database, rows: Row[]): Promise<UserRepository[]> {
       .where(and(inArray(repositoryTags.repositoryId, ids), eq(tags.kind, 'AI')))
       .orderBy(tags.slug),
   ])
-  return rows.map((row) =>
-    toItem(
-      row,
+  return {
+    categories: (repositoryId: string): Category[] =>
       categoryRows
-        .filter((c) => c.repositoryId === row.repository.id)
+        .filter((c) => c.repositoryId === repositoryId)
         .map(({ slug, name, path }) => ({ slug, name, path })),
-      tagRows.filter((t) => t.repositoryId === row.repository.id).map((t) => t.slug),
-    ),
-  )
+    tags: (repositoryId: string): string[] =>
+      tagRows.filter((t) => t.repositoryId === repositoryId).map((t) => t.slug),
+  }
 }
 
 function baseQuery(db: Database) {
@@ -467,6 +553,21 @@ export const UNKNOWN_CATEGORY = {
 } as const
 
 /**
+ * La ruta de una categoría del catálogo por su slug, para filtrar por su rama
+ * entera. Un slug que el catálogo no conoce es 422 sobre `category`, no una
+ * lista vacía (H-08). Lo usan la biblioteca y la búsqueda.
+ */
+export async function categoryPath(db: Database, slug: string): Promise<string> {
+  const [category] = await db
+    .select({ path: categories.path })
+    .from(categories)
+    .where(eq(categories.slug, slug))
+    .limit(1)
+  if (!category) throw new ValidationError([UNKNOWN_CATEGORY])
+  return category.path
+}
+
+/**
  * specs/library · «Lista con orden y filtros» y «Biblioteca vacía». Solo las
  * relaciones de la cuenta con sesión. Los valores de orden y filtro ya
  * vienen validados por `libraryQuerySchema`: un valor fuera del dominio es un
@@ -488,17 +589,12 @@ export async function listUserRepositories(
     conditions.push(sql`lower(${repositories.license}) = ${query.license.toLowerCase()}`)
   if (query.minStars !== undefined) conditions.push(gte(repositories.stars, query.minStars))
   if (query.category) {
-    const [category] = await db
-      .select({ path: categories.path })
-      .from(categories)
-      .where(eq(categories.slug, query.category))
-      .limit(1)
-    if (!category) throw new ValidationError([UNKNOWN_CATEGORY])
+    const path = await categoryPath(db, query.category)
     conditions.push(sql`exists (
       select 1 from ${repositoryCategories}
       inner join ${categories} on ${categories.id} = ${repositoryCategories.categoryId}
       where ${repositoryCategories.repositoryId} = ${repositories.id}
-        and (${categories.path} = ${category.path} or ${categories.path} like ${`${category.path}/%`})
+        and (${categories.path} = ${path} or ${categories.path} like ${`${path}/%`})
     )`)
   }
   const where = and(...conditions)
