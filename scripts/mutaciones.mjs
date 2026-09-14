@@ -208,6 +208,18 @@ const CATALOGO = [
       [pruebas('auth'), 'la carrera de altas la para el índice único y responde 422, no 500'],
     ],
   },
+  {
+    id: 'repositorio-unico',
+    que: 'cada cuenta que guarda un repositorio vuelve a pedirlo a GitHub y crea otra fila global',
+    fichero: 'apps/web/src/modules/repositories/service.ts',
+    cambios: [['  let repositoryId = await findRepositoryId(db, ref.fullName)\n', '  let repositoryId = null\n']],
+    muerden: [
+      [
+        pruebas('repositories'),
+        'la segunda cuenta que guarda lo mismo no vuelve a pedirlo a GitHub y solo crea su relación',
+      ],
+    ],
+  },
   // Con H3 (RGM-4) entra la mutación de la vertical entera, la única que
   // recorre el flujo principal: la biblioteca deja de ser privada y cada
   // cuenta ve las de todas. Muerde la prueba con dos cuentas y Playwright.

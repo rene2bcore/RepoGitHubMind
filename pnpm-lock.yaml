@@ -44,6 +44,9 @@ importers:
       '@rgm/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@rgm/github':
+        specifier: workspace:*
+        version: link:../../packages/github
       '@rgm/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -100,6 +103,37 @@ importers:
         specifier: ~6.0.3
         version: 6.0.3
 
+  apps/worker:
+    dependencies:
+      '@rgm/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@rgm/github':
+        specifier: workspace:*
+        version: link:../../packages/github
+      '@rgm/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      dotenv:
+        specifier: ^17.4.2
+        version: 17.4.2
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(postgres@3.4.9)
+    devDependencies:
+      '@rgm/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      '@types/node':
+        specifier: ^24.13.2
+        version: 24.13.4
+      tsx:
+        specifier: ^4.23.13
+        version: 4.23.13
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+
   packages/config: {}
 
   packages/db:
@@ -132,6 +166,22 @@ importers:
       tsx:
         specifier: ^4.23.13
         version: 4.23.13
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+
+  packages/github:
+    dependencies:
+      '@rgm/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      '@rgm/config':
+        specifier: workspace:*
+        version: link:../config
+      '@types/node':
+        specifier: ^24.13.2
+        version: 24.13.4
       typescript:
         specifier: ~6.0.3
         version: 6.0.3

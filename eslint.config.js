@@ -22,7 +22,10 @@ export default tseslint.config(
     rules: {
       // El prompt maestro §80: sin `any` salvo justificación escrita al lado.
       '@typescript-eslint/no-explicit-any': 'error',
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', ignoreRestSiblings: true },
+      ],
     },
   },
   {

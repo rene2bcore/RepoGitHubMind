@@ -1,4 +1,11 @@
-import type { LoginBody, RegisterBody, User } from '@rgm/shared'
+import type {
+  ListMeta,
+  LoginBody,
+  RegisterBody,
+  SaveRepositoryBody,
+  User,
+  UserRepository,
+} from '@rgm/shared'
 
 /**
  * Único punto de contacto del cliente con la API. Desenvuelve `{ data }`,
@@ -36,6 +43,16 @@ export async function request<T>(
   init: RequestInit & { silenciarRechazo?: boolean } = {},
   fetchImpl: FetchLike = fetch,
 ): Promise<T> {
+  const { body } = await requestFull<T>(path, init, fetchImpl)
+  return body.data
+}
+
+/** Como `request`, pero con el estado y el `meta` de la respuesta. */
+export async function requestFull<T>(
+  path: string,
+  init: RequestInit & { silenciarRechazo?: boolean } = {},
+  fetchImpl: FetchLike = fetch,
+): Promise<{ status: number; body: { data: T; meta?: ListMeta } }> {
   const { silenciarRechazo, ...rest } = init
   let res: Response
   try {
@@ -60,7 +77,7 @@ export async function request<T>(
     if (res.status === 401 && !silenciarRechazo) for (const l of unauthorizedListeners) l()
     throw new ApiError(res.status, items)
   }
-  return (body as { data: T }).data
+  return { status: res.status, body: body as { data: T; meta?: ListMeta } }
 }
 
 function isErrorBody(body: unknown): body is { errors: { message: string; field?: string }[] } {
@@ -78,4 +95,22 @@ export const api = {
     request<User>('/api/v1/auth/login', { method: 'POST', body: JSON.stringify(body) }),
   logout: () => request<{ loggedOut: boolean }>('/api/v1/auth/logout', { method: 'POST' }),
   me: () => request<User>('/api/v1/auth/me', { silenciarRechazo: true }),
+  /** 201 si es nuevo en la biblioteca, 200 si ya estaba: `created` lo dice. */
+  saveRepository: async (body: SaveRepositoryBody) => {
+    const { status, body: res } = await requestFull<UserRepository>('/api/v1/repositories', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    })
+    return { item: res.data, created: status === 201 }
+  },
+  listRepositories: async (params: Record<string, string> = {}) => {
+    const qs = new URLSearchParams(params).toString()
+    const { body } = await requestFull<UserRepository[]>(
+      `/api/v1/repositories${qs ? `?${qs}` : ''}`,
+    )
+    return {
+      items: body.data,
+      meta: body.meta ?? { total: body.data.length, page: 1, pageSize: 24 },
+    }
+  },
 }

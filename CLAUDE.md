@@ -71,6 +71,8 @@ Route Handlers bajo `/api/v1`. `scripts/verificar-docs.mjs` contrasta esta tabla
 | POST   | `/api/v1/auth/login`    | no   |
 | POST   | `/api/v1/auth/logout`   | sí   |
 | GET    | `/api/v1/auth/me`       | sí   |
+| POST   | `/api/v1/repositories`  | sí   |
+| GET    | `/api/v1/repositories`  | sí   |
 
 ### El modelo conceptual que no se negocia
 
