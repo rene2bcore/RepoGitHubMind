@@ -71,6 +71,75 @@ export const saveRepositorySchema = z.object({
 })
 export type SaveRepositoryBody = z.infer<typeof saveRepositorySchema>
 
+export const ANALYSIS_STATUSES = ['PENDING', 'COMPLETED', 'FAILED', 'DISABLED'] as const
+export const ABANDONMENT_RISKS = ['LOW', 'MEDIUM', 'HIGH', 'UNKNOWN'] as const
+
+/**
+ * Lo que sale por la API de un repositorio global y de la relación privada.
+ * El README no viaja en la lista: solo en el detalle (H3).
+ */
+export const analysisSchema = z.object({
+  status: z.enum(ANALYSIS_STATUSES),
+  summary: z.string().nullable(),
+  purpose: z.string().nullable(),
+  mainUseCases: z.array(z.string()),
+  abandonmentRisk: z.enum(ABANDONMENT_RISKS).nullable(),
+  aiAnalyzedAt: z.iso.datetime().nullable(),
+})
+export type Analysis = z.infer<typeof analysisSchema>
+
+export const repositorySchema = z.object({
+  id: z.uuid(),
+  fullName: z.string(),
+  owner: z.string(),
+  name: z.string(),
+  url: z.url(),
+  description: z.string().nullable(),
+  homepage: z.string().nullable(),
+  primaryLanguage: z.string().nullable(),
+  license: z.string().nullable(),
+  topics: z.array(z.string()),
+  stars: z.number().int(),
+  forks: z.number().int(),
+  openIssues: z.number().int(),
+  archived: z.boolean(),
+  defaultBranch: z.string().nullable(),
+  latestRelease: z.string().nullable(),
+  githubCreatedAt: z.iso.datetime().nullable(),
+  githubUpdatedAt: z.iso.datetime().nullable(),
+  githubPushedAt: z.iso.datetime().nullable(),
+  latestReleaseAt: z.iso.datetime().nullable(),
+  metadataRefreshedAt: z.iso.datetime(),
+  analysis: analysisSchema,
+  categories: z.array(z.object({ slug: z.string(), name: z.string() })),
+})
+export type Repository = z.infer<typeof repositorySchema>
+
+export const personalSchema = z.object({
+  status: z.enum(PERSONAL_STATUSES),
+  favorite: z.boolean(),
+  rating: z.number().int().min(1).max(5).nullable(),
+  notes: z.string().nullable(),
+  savedAt: z.iso.datetime(),
+  reviewedAt: z.iso.datetime().nullable(),
+  updatedAt: z.iso.datetime(),
+})
+export type Personal = z.infer<typeof personalSchema>
+
+export const userRepositorySchema = z.object({
+  id: z.uuid(),
+  repository: repositorySchema,
+  personal: personalSchema,
+})
+export type UserRepository = z.infer<typeof userRepositorySchema>
+
+export const listMetaSchema = z.object({
+  total: z.number().int(),
+  page: z.number().int(),
+  pageSize: z.number().int(),
+})
+export type ListMeta = z.infer<typeof listMetaSchema>
+
 export const personalUpdateSchema = z
   .object({
     status: z.enum(PERSONAL_STATUSES).optional(),

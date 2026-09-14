@@ -9,7 +9,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "dev": "pnpm --filter web dev",
+    "dev": "pnpm --parallel --filter web --filter worker dev",
     "build": "pnpm -r build",
     "lint": "eslint .",
     "typecheck": "pnpm -r typecheck",
@@ -23,7 +23,9 @@
     "db:seed": "pnpm --filter @rgm/db seed",
     "openapi:generate": "pnpm --filter web openapi:generate",
     "openapi:check": "pnpm --filter web openapi:check",
-    "prepare": "git config core.hooksPath .githooks"
+    "prepare": "git config core.hooksPath .githooks",
+    "dev:web": "pnpm --filter web dev",
+    "dev:worker": "pnpm --filter worker dev"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",

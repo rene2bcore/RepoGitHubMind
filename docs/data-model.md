@@ -169,7 +169,7 @@ erDiagram
     }
 ```
 
-`sessions` guarda las sesiones propias de R1 ([ADR-0013](adr/0013-sesion-propia-en-vez-de-authjs.md)): cerrar sesión borra la fila. `accounts` y `verification_tokens` (no dibujada) tienen la forma que el adaptador de Drizzle para Auth.js exige y se crean ya para no migrar dos veces cuando entren GitHub OAuth y Google en R2; en R1 están vacías. Columnas reales en `packages/db/src/schema.ts` y en `packages/db/migrations/`. Si `pg-boss` resulta la cola elegida ([ADR-0010](adr/0010-cola-de-trabajos-en-postgresql.md)), `background_jobs` la sustituye su propio esquema `pgboss` y aquí queda solo la vista de estados que lee la interfaz.
+`sessions` guarda las sesiones propias de R1 ([ADR-0013](adr/0013-sesion-propia-en-vez-de-authjs.md)): cerrar sesión borra la fila. `accounts` y `verification_tokens` (no dibujada) tienen la forma que el adaptador de Drizzle para Auth.js exige y se crean ya para no migrar dos veces cuando entren GitHub OAuth y Google en R2; en R1 están vacías. Columnas reales en `packages/db/src/schema.ts` y en `packages/db/migrations/`. Con H2 existen `repositories`, `repository_analyses`, `user_repositories` y `background_jobs` (migración `0001`); `search_vector`, `repository_embeddings`, `categories`, `tags` y `ai_usage` llegan con H4 y H5. Si `pg-boss` resulta la cola elegida ([ADR-0010](adr/0010-cola-de-trabajos-en-postgresql.md)), `background_jobs` la sustituye su propio esquema `pgboss` y aquí queda solo la vista de estados que lee la interfaz.
 
 ## Restricciones e índices
 

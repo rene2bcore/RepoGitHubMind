@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "RepoGitHubMind API",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "description": "Contrato de los Route Handlers bajo /api/v1, generado desde los esquemas Zod con `pnpm openapi:generate` y vigilado en CI con `pnpm openapi:check` (ADR-0001). Toda respuesta de éxito va envuelta en { data } y toda respuesta de error en { errors: [...] }. Las Server Actions no forman parte del contrato."
   },
   "security": [
@@ -120,6 +120,327 @@
         "required": [
           "email",
           "password"
+        ]
+      },
+      "UserRepository": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "repository": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "fullName": {
+                "type": "string"
+              },
+              "owner": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "description": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "homepage": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "primaryLanguage": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "license": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "topics": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "stars": {
+                "type": "integer"
+              },
+              "forks": {
+                "type": "integer"
+              },
+              "openIssues": {
+                "type": "integer"
+              },
+              "archived": {
+                "type": "boolean"
+              },
+              "defaultBranch": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "latestRelease": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "githubCreatedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "githubUpdatedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "githubPushedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "latestReleaseAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "metadataRefreshedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "analysis": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "PENDING",
+                      "COMPLETED",
+                      "FAILED",
+                      "DISABLED"
+                    ]
+                  },
+                  "summary": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "purpose": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "mainUseCases": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "abandonmentRisk": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "LOW",
+                      "MEDIUM",
+                      "HIGH",
+                      "UNKNOWN",
+                      null
+                    ]
+                  },
+                  "aiAnalyzedAt": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "status",
+                  "summary",
+                  "purpose",
+                  "mainUseCases",
+                  "abandonmentRisk",
+                  "aiAnalyzedAt"
+                ]
+              },
+              "categories": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "slug": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "slug",
+                    "name"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "id",
+              "fullName",
+              "owner",
+              "name",
+              "url",
+              "description",
+              "homepage",
+              "primaryLanguage",
+              "license",
+              "topics",
+              "stars",
+              "forks",
+              "openIssues",
+              "archived",
+              "defaultBranch",
+              "latestRelease",
+              "githubCreatedAt",
+              "githubUpdatedAt",
+              "githubPushedAt",
+              "latestReleaseAt",
+              "metadataRefreshedAt",
+              "analysis",
+              "categories"
+            ]
+          },
+          "personal": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "NEW",
+                  "TO_REVIEW",
+                  "REVIEWED",
+                  "TESTING",
+                  "INSTALLED",
+                  "USING",
+                  "FAVORITE",
+                  "REJECTED",
+                  "ARCHIVED"
+                ]
+              },
+              "favorite": {
+                "type": "boolean"
+              },
+              "rating": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 1,
+                "maximum": 5
+              },
+              "notes": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "savedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "reviewedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "status",
+              "favorite",
+              "rating",
+              "notes",
+              "savedAt",
+              "reviewedAt",
+              "updatedAt"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "repository",
+          "personal"
+        ]
+      },
+      "SaveRepositoryBody": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "source": {
+            "type": "string",
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "ListMeta": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer"
+          },
+          "page": {
+            "type": "integer"
+          },
+          "pageSize": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "page",
+          "pageSize"
         ]
       }
     },
@@ -346,6 +667,281 @@
           },
           "401": {
             "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errors"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errors"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repositories": {
+      "post": {
+        "summary": "Guardar un repositorio público de GitHub por su URL",
+        "description": "Cualquier variante de la URL normaliza a owner/repo. El repositorio es global y se pide a GitHub una sola vez; la respuesta llega con la metadata presente y el análisis de IA pendiente. El token de GitHub nunca sale.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveRepositoryBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ya estaba en la biblioteca: la relación existente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/UserRepository"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Guardado en la biblioteca de la cuenta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/UserRepository"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errors"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "GitHub no conoce ese repositorio, o es privado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errors"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "La URL no es de un repositorio de GitHub",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errors"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiados guardados desde la cuenta, o GitHub ha limitado las peticiones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errors"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errors"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Mi biblioteca: las relaciones privadas de la cuenta, con orden, filtros y paginación",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "NEW",
+                "TO_REVIEW",
+                "REVIEWED",
+                "TESTING",
+                "INSTALLED",
+                "USING",
+                "FAVORITE",
+                "REJECTED",
+                "ARCHIVED"
+              ]
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "required": false,
+            "name": "favorite",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 60
+            },
+            "required": false,
+            "name": "language",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 60
+            },
+            "required": false,
+            "name": "license",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            },
+            "required": false,
+            "name": "category",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "required": false,
+            "name": "minStars",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "savedAt",
+                "pushedAt",
+                "stars",
+                "name",
+                "rating"
+              ],
+              "default": "savedAt"
+            },
+            "required": false,
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 24
+            },
+            "required": false,
+            "name": "pageSize",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Solo lo de la cuenta con sesión. Vacía es 200 con data [] y meta.total 0",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/UserRepository"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/ListMeta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errors"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Un valor de orden o de filtro fuera del dominio",
             "content": {
               "application/json": {
                 "schema": {

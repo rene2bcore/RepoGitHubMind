@@ -1,6 +1,14 @@
 import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi'
 import { z } from 'zod'
-import { loginSchema, registerSchema, userSchema } from '@rgm/shared'
+import {
+  libraryQuerySchema,
+  listMetaSchema,
+  loginSchema,
+  registerSchema,
+  saveRepositorySchema,
+  userRepositorySchema,
+  userSchema,
+} from '@rgm/shared'
 
 /**
  * El contrato se construye desde los mismos esquemas Zod que validan los
@@ -35,6 +43,9 @@ export function buildDocument() {
   const user = registry.register('User', userSchema)
   const registerBody = registry.register('RegisterBody', registerSchema)
   const loginBody = registry.register('LoginBody', loginSchema)
+  const userRepository = registry.register('UserRepository', userRepositorySchema)
+  const saveRepositoryBody = registry.register('SaveRepositoryBody', saveRepositorySchema)
+  const listMeta = registry.register('ListMeta', listMetaSchema)
 
   const errorResponse = (description: string) => ({
     description,
@@ -102,12 +113,52 @@ export function buildDocument() {
     },
   })
 
+  registry.registerPath({
+    method: 'post',
+    path: '/api/v1/repositories',
+    summary: 'Guardar un repositorio público de GitHub por su URL',
+    description:
+      'Cualquier variante de la URL normaliza a owner/repo. El repositorio es global y se pide a GitHub una sola vez; la respuesta llega con la metadata presente y el análisis de IA pendiente. El token de GitHub nunca sale.',
+    request: { body: { content: { 'application/json': { schema: saveRepositoryBody } } } },
+    responses: {
+      201: dataResponse('Guardado en la biblioteca de la cuenta', userRepository),
+      200: dataResponse('Ya estaba en la biblioteca: la relación existente', userRepository),
+      401: errorResponse('Sin sesión'),
+      404: errorResponse('GitHub no conoce ese repositorio, o es privado'),
+      422: errorResponse('La URL no es de un repositorio de GitHub'),
+      429: errorResponse(
+        'Demasiados guardados desde la cuenta, o GitHub ha limitado las peticiones',
+      ),
+      500: errorResponse('Error interno del servidor'),
+    },
+  })
+
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/repositories',
+    summary: 'Mi biblioteca: las relaciones privadas de la cuenta, con orden, filtros y paginación',
+    request: { query: libraryQuerySchema },
+    responses: {
+      200: {
+        description: 'Solo lo de la cuenta con sesión. Vacía es 200 con data [] y meta.total 0',
+        content: {
+          'application/json': {
+            schema: z.object({ data: z.array(userRepository), meta: listMeta }),
+          },
+        },
+      },
+      401: errorResponse('Sin sesión'),
+      422: errorResponse('Un valor de orden o de filtro fuera del dominio'),
+      500: errorResponse('Error interno del servidor'),
+    },
+  })
+
   const generator = new OpenApiGeneratorV31(registry.definitions)
   return generator.generateDocument({
     openapi: '3.1.0',
     info: {
       title: 'RepoGitHubMind API',
-      version: '0.2.0',
+      version: '0.3.0',
       description:
         'Contrato de los Route Handlers bajo /api/v1, generado desde los esquemas Zod con `pnpm openapi:generate` y vigilado en CI con `pnpm openapi:check` (ADR-0001). Toda respuesta de éxito va envuelta en { data } y toda respuesta de error en { errors: [...] }. Las Server Actions no forman parte del contrato.',
     },

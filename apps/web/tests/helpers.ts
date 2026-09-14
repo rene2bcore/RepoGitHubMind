@@ -1,5 +1,5 @@
-import { sql } from 'drizzle-orm'
-import { getDb } from '@rgm/db'
+import { databaseUrlForEnv } from '@rgm/db'
+import { truncateAllTables } from '@rgm/db/migrate'
 import { POST as register } from '@/app/api/v1/auth/register/route'
 
 /**
@@ -55,5 +55,5 @@ export async function cuentaConSesion(
 
 /** Deja la base de pruebas vacía entre ficheros. */
 export async function limpiarBase(): Promise<void> {
-  await getDb().execute(sql`TRUNCATE TABLE sessions, accounts, verification_tokens, users CASCADE`)
+  await truncateAllTables(databaseUrlForEnv())
 }

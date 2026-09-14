@@ -2,7 +2,7 @@
 
 ## Estado
 
-Aceptada · 2026-09-14
+Aceptada · 2026-09-14 · Decidida la tabla propia en RGM-3, 2026-09-14
 
 ## Contexto
 
@@ -22,8 +22,8 @@ Guardar un repositorio encadena trabajo que no cabe en una petición: pedir meta
 
 ## Consecuencias
 
-El worker y la web comparten la base y el `pg_dump` diario incluye la cola. La cola compite por conexiones con la aplicación; con un VPS y pocos usuarios no importa, y es lo primero que se mide si importa. La decisión entre `pg-boss` y tabla propia se toma en RGM-3 y se anota aquí con fecha.
+El worker y la web comparten la base y el `pg_dump` diario incluye la cola. La cola compite por conexiones con la aplicación; con un VPS y pocos usuarios no importa, y es lo primero que se mide si importa. **Decidido en RGM-3 (2026-09-14): tabla propia.** `pg-boss` trae su propio esquema, migraciones y supervisor, y lo que H2 necesita cabe en `packages/db/src/queue.ts`: `enqueueJob` idempotente por un índice único parcial sobre `(type, repository_id)` mientras el trabajo está activo, `claimJob` con `FOR UPDATE SKIP LOCKED`, `failJob` con backoff exponencial o con la ventana que dicte el error (`retryAfter`). Si la importación masiva (S1) pide prioridades o concurrencia por tipo, se revisita.
 
 ## Cómo se comprobó
 
-Pendiente de la Entrega 2 (RGM-3): una prueba de integración que encole el mismo repositorio dos veces y compruebe una sola `Repository` y un solo trabajo efectivo; y otra que simule un `429` de GitHub y compruebe el reintento con `run_after` en el futuro.
+`apps/worker/tests/cola.test.ts` (2026-09-14): encolar dos veces deja una fila activa; un fallo vuelve con `run_after` en el futuro y al agotar intentos queda `FAILED`; un error con `retryAfter` fija esa fecha; dos workers no toman el mismo trabajo. `apps/web/tests/repositories.test.ts`: guardar el mismo repositorio desde dos cuentas deja una `Repository` y una llamada a GitHub.

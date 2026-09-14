@@ -4,7 +4,7 @@ Las URLs de repositorios interesantes de GitHub acaban en chats de WhatsApp, not
 
 Producto open source de **2BCORE** bajo [Apache-2.0](LICENSE) y, a la vez, Proyecto Final del curso AI4Devs de LIDR. El repositorio es también el registro de **cómo** se construye: PRD y specs, trazabilidad de historia a código, decisiones en ADR, y reglas de proceso bajadas a comprobaciones que corren en CI.
 
-> **Estado a 2026-09-14:** Entrega 2 en curso. H1 (cuentas y sesión) está construida y verificada: registro, acceso, sesión que sobrevive a recargar y termina al salir, biblioteca vacía, contrato con las cuatro rutas de `auth`, 43 pruebas y el flujo E2E a escritorio y a 375 px. Las capturas están en [`docs/evidencia/`](docs/evidencia/). H2 y H3 siguen en esta entrega.
+> **Estado a 2026-09-14:** Entrega 2 en curso. H1 (cuentas y sesión) y H2 (guardar por URL con la metadata de GitHub, cola y worker) están construidas y verificadas: 67 pruebas, el flujo E2E a escritorio y a 375 px, y el contrato con seis rutas. Las capturas están en [`docs/evidencia/`](docs/evidencia/). H3 sigue en esta entrega.
 
 ## Ficha del proyecto
 
@@ -58,7 +58,7 @@ Vertical académica de MVP-R1. Lo que MVP-R1 incluye y esta vertical no, en [`do
 | Historia                                                                                                        | Jira  | Prioridad   | Estado                                                                    |
 | --------------------------------------------------------------------------------------------------------------- | ----- | ----------- | ------------------------------------------------------------------------- |
 | [H1 · Cuentas y sesión](docs/backlog/RGM-2-cuentas-y-sesion.md)                                                 | RGM-2 | must-have   | Construida en la Entrega 2 (RGM-9 datos, RGM-10 backend, RGM-11 frontend) |
-| [H2 · Guardar un repositorio por URL con metadata de GitHub](docs/backlog/RGM-3-guardar-repositorio-por-url.md) | RGM-3 | must-have   | Por hacer                                                                 |
+| [H2 · Guardar un repositorio por URL con metadata de GitHub](docs/backlog/RGM-3-guardar-repositorio-por-url.md) | RGM-3 | must-have   | Construida en la Entrega 2                                                |
 | [H3 · Mi biblioteca: estado, favorito, rating y notas](docs/backlog/RGM-4-mi-biblioteca.md)                     | RGM-4 | must-have   | Por hacer                                                                 |
 | [H4 · Análisis de IA cacheado con proveedor reemplazable](docs/backlog/RGM-5-analisis-ia.md)                    | RGM-5 | must-have   | Por hacer                                                                 |
 | [H5 · Búsqueda híbrida en lenguaje natural](docs/backlog/RGM-6-busqueda-hibrida.md)                             | RGM-6 | must-have   | Por hacer                                                                 |
@@ -109,6 +109,7 @@ Los `.env.example` no llevan valores reales; `scripts/verificar-docs.mjs` lo com
 | `DATABASE_URL`                                | PostgreSQL de desarrollo                                                                                                                                                               | `postgres://rgm:rgm@localhost:5434/repogithubmind` |
 | `AUTH_SECRET`                                 | Secreto del servidor para la sesión. Se genera con `openssl rand -base64 32`                                                                                                           | vacío                                              |
 | `AUTH_URL`                                    | URL pública de la app                                                                                                                                                                  | `http://localhost:3000`                            |
+| `GITHUB_FAKE`                                 | `1` para desarrollar y probar sin red, con respuestas grabadas de GitHub                                                                                                               | `0`                                                |
 | `GITHUB_TOKEN`                                | Token de solo lectura para ampliar el rate limit de la REST API. Opcional                                                                                                              | vacío                                              |
 | `AI_ANALYSIS_ENABLED`                         | Interruptor del análisis de IA                                                                                                                                                         | `true`                                             |
 | `AI_PROVIDER`, `AI_MODEL_ANALYSIS`            | Proveedor y modelo del análisis. Nunca hardcodeados                                                                                                                                    | `openrouter`, vacío                                |

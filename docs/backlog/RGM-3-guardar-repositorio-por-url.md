@@ -65,4 +65,18 @@ _Motivo: el maestro §13 lo exige; el PRD lo recoge como RF-8 pero sin decir cu�
 
 ## Tickets
 
-Se descompone al cerrar H1. Capas previstas: datos (`repositories`, `background_jobs`, decisión `pg-boss`), backend (`POST /api/v1/repositories`, `GitHubProvider`, cola), frontend (campo «Pega una URL» en la biblioteca y tarjeta con metadata).
+Construida el 2026-09-14 en `feat/RGM-3-guardar-repositorio-por-url`, en las tres capas y en un solo PR (el ticket `RGM-3` no se descompuso en Jira: la historia cabía en un día).
+
+**Datos.** `repositories`, `repository_analyses`, `user_repositories` y `background_jobs` en `packages/db/src/schema.ts`, migración `0001`. Cola con tabla propia ([ADR-0010](../adr/0010-cola-de-trabajos-en-postgresql.md), decidido).
+
+**Backend.** `packages/github` con `GitHubProvider`, `RestGitHubProvider` y `FakeGitHubProvider`; `apps/web/src/modules/repositories/service.ts`; `POST` y `GET /api/v1/repositories`; `apps/worker` consumiendo la cola.
+
+**Frontend.** La biblioteca con el campo «Pega una URL de GitHub» y las tarjetas (`components/library-view.tsx`, `components/repository-card.tsx`); `flujo.e2e.ts` guarda, repite y rechaza una URL de GitLab.
+
+**Definition of Done**
+
+- [x] CA-1 a CA-7 con prueba de integración o de navegador; CA-8 validado contra el maestro §13 y probado (fechas separadas)
+- [x] `pnpm openapi:check` en verde con las dos rutas nuevas; tabla de `CLAUDE.md` al día
+- [x] Mutación `repositorio-unico` en el catálogo, vista morder
+- [x] `docs/capabilities/repositories/README.md`; filas en `docs/traceability.md`
+- [x] Dependencias nuevas: ninguna (el proveedor usa `fetch` nativo)
