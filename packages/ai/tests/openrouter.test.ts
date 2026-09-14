@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { AIOutputInvalidError, AIProviderCallError } from '../src/errors'
 import { OpenRouterProvider } from '../src/openrouter'
 import { completion, request, VALID } from './fixtures/openrouter'
+// Grabada el 2026-09-14 con la clave real, una sola llamada, sin identificadores.
+import grabada from './fixtures/openrouter-pgvector.json'
 
 /**
  * specs/ai · «Salida estructurada y acotada» («Salida válida», «Salida que se
@@ -71,6 +73,22 @@ describe('OpenRouterProvider', () => {
     expect(prompt).toContain('Open-source vector similarity search for Postgres.')
     // La clave viaja solo en la cabecera.
     expect(prompt).not.toContain(KEY)
+  })
+
+  it('la respuesta real grabada del modelo por defecto para pgvector valida al primer intento y trae su coste', async () => {
+    const { fetchImpl } = fakeFetch([() => Response.json(grabada)])
+    const outcome = await provider(fetchImpl).analyzeRepository(request())
+    expect(outcome.calls).toEqual([
+      {
+        inputTokens: 4401,
+        outputTokens: 672,
+        estimatedCost: 0.0007089,
+        success: true,
+        error: null,
+      },
+    ])
+    expect(outcome.analysis.summary.length).toBeLessThanOrEqual(200)
+    expect(outcome.analysis.categories).toContain('data/databases/vector')
   })
 
   it('una salida que se pasa de largo se reintenta una vez pidiendo corrección, y la corregida se acepta', async () => {

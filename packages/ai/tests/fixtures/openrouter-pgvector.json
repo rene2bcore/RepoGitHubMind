@@ -1,0 +1,38 @@
+{
+  "model": "google/gemini-2.5-flash-lite",
+  "provider": "Google",
+  "object": "chat.completion",
+  "choices": [
+    {
+      "index": 0,
+      "finish_reason": "stop",
+      "message": {
+        "role": "assistant",
+        "content": "{\n  \"summary\": \"Extensión de PostgreSQL para búsqueda de similitud vectorial, soporta búsqueda exacta y aproximada, y varios tipos de vectores y distancias.\",\n  \"purpose\": \"Permite almacenar y consultar vectores de alta dimensionalidad dentro de PostgreSQL, facilitando la implementación de sistemas de recomendación, búsqueda semántica y otras aplicaciones de IA que requieren análisis de similitud vectorial.\",\n  \"mainUseCases\": [\n    \"Búsqueda de similitud vectorial en bases de datos relacionales.\",\n    \"Implementación de sistemas de recomendación personalizados.\",\n    \"Habilitación de búsqueda semántica y de texto completo.\",\n    \"Análisis de datos de series temporales y detección de anomalías.\",\n    \"Procesamiento y consulta de embeddings generados por modelos de ML.\"\n  ],\n  \"categories\": [\n    \"data/databases/vector\",\n    \"artificial-intelligence/llm/embeddings\",\n    \"data/search\"\n  ],\n  \"tags\": [\n    \"vector-database\",\n    \"postgres\",\n    \"similarity-search\",\n    \"ann\",\n    \"embeddings\",\n    \"ai\",\n    \"machine-learning\",\n    \"database-extension\",\n    \"vector-similarity\",\n    \"rag\"\n  ],\n  \"installationSummary\": \"Se compila e instala la extensión en Linux/Mac (`make install`) o Windows (`nmake install`). También disponible vía Docker, Homebrew, PGXN, APT, Yum, pkg, APK, conda-forge y preinstalado en Postgres.app y algunos proveedores cloud.\",\n  \"deploymentType\": [\n    \"self-hosted\",\n    \"docker\",\n    \"cloud\"\n  ],\n  \"frameworks\": [\n    \"PostgreSQL\"\n  ],\n  \"maturity\": \"Estable\",\n  \"advantages\": [\n    \"Integración nativa con PostgreSQL, aprovechando sus características ACID y de concurrencia.\",\n    \"Soporte para búsqueda exacta y aproximada (HNSW, IVFFlat).\",\n    \"Flexibilidad en tipos de vectores (precisión simple, media, binarios, dispersos) y métricas de distancia.\"\n  ],\n  \"limitations\": [\n    \"El rendimiento puede depender de la configuración de PostgreSQL y el hardware.\",\n    \"La creación de índices ANN puede consumir recursos significativos.\",\n    \"Requiere PostgreSQL 13+.\"\n  ],\n  \"targetUsers\": [\n    \"Desarrolladores de bases de datos\",\n    \"Ingenieros de datos\",\n    \"Científicos de datos\",\n    \"Ingenieros de ML\",\n    \"Desarrolladores de aplicaciones con IA\"\n  ],\n  \"activityAssessment\": \"El último push fue el 2026-09-10, lo que indica actividad reciente. La fecha de creación es 2021-04-20. La alta cantidad de estrellas y forks sugiere una comunidad activa y un proyecto maduro.\",\n  \"abandonmentRisk\": \"LOW\",\n  \"aiConfidence\": 0.95\n}"
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 4401,
+    "completion_tokens": 672,
+    "total_tokens": 5073,
+    "cost": 0.0007089,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.0007089,
+      "upstream_inference_prompt_cost": 0.0004401,
+      "upstream_inference_completions_cost": 0.0002688
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

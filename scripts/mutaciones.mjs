@@ -226,6 +226,26 @@ const CATALOGO = [
     ],
   },
   {
+    // ADR-0009: la regla de la caché la preguntan la web al encolar y el
+    // worker antes de llamar. Se muta la regla y no uno de los dos sitios:
+    // mutar solo uno lo tapa el otro, y la prueba seguiría en verde sin
+    // demostrar nada de la regla.
+    id: 'ADR-0009',
+    que: 'la caché deja de reutilizar el análisis y cada cuenta que guarda un repositorio vuelve a pagar la IA',
+    fichero: 'packages/ai/src/cache.ts',
+    cambios: [['  return null\n}', "  return 'expired'\n}"]],
+    muerden: [
+      [
+        pruebas('apps/web/tests/analisis'),
+        'la segunda cuenta ve el análisis al momento y no se registra ninguna fila nueva en ai_usage',
+      ],
+      [
+        pruebas('packages/ai/tests/cache'),
+        'un análisis completado, vigente y posterior al último push se reutiliza',
+      ],
+    ],
+  },
+  {
     // La vertical del PRD: la única mutación que recorre el flujo principal
     // entero. Sin ella, ninguna comprobación demuestra que el producto se
     // puede demostrar.
