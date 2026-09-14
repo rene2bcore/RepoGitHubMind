@@ -35,6 +35,9 @@ export const envSchema = z.object({
   AI_MAX_README_CHARS: z.coerce.number().int().positive().default(12000),
   AI_ANALYSIS_TTL_DAYS: z.coerce.number().int().positive().default(90),
   DEBUG_HTTP_ERRORS: bool,
+  // Solo detrás de un proxy propio (Cloudflare Tunnel) se cree la dirección
+  // que llega en cabeceras; sin proxy, cualquiera las escribe.
+  TRUST_PROXY: bool,
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug']).default('info'),
 })
 export type Env = z.infer<typeof envSchema>
