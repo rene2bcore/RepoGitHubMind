@@ -12,7 +12,7 @@ cp .env.example .env                                   # rellena AUTH_SECRET y A
 docker compose -f docker/docker-compose.yml up -d postgres
 pnpm db:migrate
 pnpm db:seed
-pnpm dev                                               # web en http://localhost:3000 y worker
+pnpm dev                                               # web en http://localhost:3000 y worker (pnpm dev:web / dev:worker por separado)
 ```
 
 Todo en contenedores:

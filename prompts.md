@@ -52,9 +52,14 @@
 - **Resultado:** monorepo pnpm con `apps/web`, `packages/shared`, `packages/db` y `packages/config`; PostgreSQL 16 + pgvector en Docker con las dos bases; esquema Drizzle y migración inicial; cuatro Route Handlers de `auth` con el contrato regenerado; pantallas de registro y acceso; 43 pruebas (18 en web, 25 en packages) y el flujo E2E a escritorio y a 375 px; tres mutaciones nuevas en el catálogo (`ADR-0003`, `ADR-0004`, `ADR-0005`); ADR-0013; hallazgos H-04, H-05 y H-06.
 - **Ajuste humano:** se apartó Auth.js para R1 tras comprobar que con solo credenciales obligaba a rodear la librería para cumplir la spec y no revocaba la sesión al salir ([ADR-0013](docs/adr/0013-sesion-propia-en-vez-de-authjs.md)); se aceptó como deuda que `components/ui/` estén a mano (H-04); el puerto de PostgreSQL pasó a 5434 porque 5432 y 5433 estaban ocupados (H-05). El agente dio por hecho que Drizzle exponía el código SQLSTATE en el nivel superior del error y una prueba en rojo lo desmintió (H-06): el arreglo se hizo antes del primer commit, así que no hay `fix:` que lo cuente, y por eso entró en el catálogo de mutaciones. ESLint 10 no era compatible con `eslint-plugin-react` y se fijó la 9.
 
-### P-03 · Pendiente: H2, guardar un repositorio por URL (RGM-3)
+### P-03 · Implementación de H2, guardar un repositorio por URL (RGM-3)
 
-- Se registra al arrancar RGM-3: `GitHubProvider` con implementación falsa para pruebas, `POST /api/v1/repositories`, cola en PostgreSQL y el worker.
+- **Fecha:** 2026-09-14
+- **Herramienta y modelo:** Claude Code, claude-fable-5-1
+- **Objetivo:** construir H2 sobre H1: tablas globales y privadas, `GitHubProvider` real y falso, guardar y listar por la API, cola y worker, biblioteca con tarjetas, con `docs/specs/repositories` como contrato.
+- **Prompt:** continuación de la misma sesión tras fusionar el PR de H1, con el ticket `RGM-3` en «En curso». Entrada: `docs/backlog/RGM-3-guardar-repositorio-por-url.md`, `docs/specs/repositories/spec.md`, `docs/specs/library/spec.md` (la lista) y `docs/data-model.md`.
+- **Resultado:** migración `0001` con cuatro tablas; `packages/github` con 6 pruebas unitarias del proveedor real (fetch grabado: cabeceras, token, 404, 403 y 429 con ventana); `packages/db/src/queue.ts` y `apps/worker` con 6 pruebas de la cola; `POST` y `GET /api/v1/repositories` con 11 pruebas de integración; la biblioteca con el campo de URL y las tarjetas; el E2E guarda, repite y rechaza; mutación `repositorio-unico`; 67 pruebas.
+- **Ajuste humano:** se decidió la tabla propia frente a `pg-boss` (ADR-0010, anotado con fecha). La revisión adversarial del PR de H1 encontró un grave real (el rate limit se evadía rotando `x-forwarded-for`, H-07) que se arregló en su propio PR antes de seguir, y el mismo criterio se aplicó a la ruta de guardar: límite por cuenta. Un `ORDER BY ... NULLS LAST DESC` mal compuesto y una prueba que reutilizaba un repositorio ya creado salieron en rojo antes del primer commit.
 
 ## Workflows
 

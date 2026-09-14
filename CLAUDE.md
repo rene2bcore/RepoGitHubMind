@@ -12,7 +12,7 @@ El repositorio es también el registro de **cómo** se construye: PRD y specs, t
 
 ### Estructura
 
-Monorepo con pnpm workspaces, decidido en [`docs/architecture.md`](docs/architecture.md). Con H1 (Entrega 2) existen `apps/web`, `packages/shared`, `packages/db` y `packages/config`; `apps/worker` y `packages/github` llegan con H2, `packages/ai` con H4 y `packages/search` con H5.
+Monorepo con pnpm workspaces, decidido en [`docs/architecture.md`](docs/architecture.md). Con H1 y H2 (Entrega 2) existen `apps/web`, `apps/worker`, `packages/shared`, `packages/db`, `packages/github` y `packages/config`; `packages/ai` llega con H4 y `packages/search` con H5.
 
 - `apps/web/` · Next.js (App Router) + React + TypeScript strict + Tailwind. UI, sesión propia con cookie `rgm_session` ([ADR-0013](docs/adr/0013-sesion-propia-en-vez-de-authjs.md)), Route Handlers bajo `/api/v1` y Server Actions. Puerto `3000`. Los `components/ui/` están escritos a mano hasta que entre shadcn ([H-04](docs/hallazgos.md))
 - `apps/worker/` · Proceso Node que consume la cola de trabajos en PostgreSQL: fetch de GitHub, análisis IA, embeddings, refresh
@@ -33,7 +33,7 @@ docker compose -f docker/docker-compose.yml up -d postgres   # PostgreSQL 16 con
 cp .env.example .env
 pnpm db:migrate                 # migraciones de Drizzle
 pnpm db:seed                    # usuario de desarrollo (taxonomía y ejemplos llegan con H4)
-pnpm dev                        # web en :3000 (el worker se suma con H2)
+pnpm dev                        # web en :3000 y worker a la vez; pnpm dev:web o dev:worker por separado
 pnpm test                       # Vitest en todo el workspace
 pnpm test:e2e                   # Playwright, en apps/web; la primera vez: pnpm --filter web exec playwright install chromium
 pnpm lint                       # eslint
@@ -45,7 +45,7 @@ pnpm openapi:generate           # escribe docs/api/openapi.json desde los esquem
 pnpm openapi:check              # sale 1 si el fichero ya no es el contrato generado. No arregla nada
 ```
 
-Hoy hay **44 pruebas** en el monorepo: 19 en web, 0 en worker y 25 en packages. **Este es el único sitio que da el número**, y CI lo contrasta con lo que ejecuta Vitest (`scripts/recuento-pruebas.mjs`): al añadir una prueba, se actualiza aquí, total y desglose.
+Hoy hay **67 pruebas** en el monorepo: 30 en web, 6 en worker y 31 en packages. **Este es el único sitio que da el número**, y CI lo contrasta con lo que ejecuta Vitest (`scripts/recuento-pruebas.mjs`): al añadir una prueba, se actualiza aquí, total y desglose.
 
 Las pruebas de navegador (Playwright, `apps/web/e2e/*.e2e.ts`) levantan `web` en el puerto 3001 contra la base de pruebas, nunca la de desarrollo, y la vacían al arrancar. Cubren pocos casos a propósito: el flujo principal entero desde la pantalla de registro y lo que ninguna otra capa ve.
 
@@ -63,7 +63,7 @@ Monolito modular en Next.js con un worker aparte y PostgreSQL + pgvector como ú
 
 ### Rutas
 
-Route Handlers bajo `/api/v1`. `scripts/verificar-docs.mjs` contrasta esta tabla contra el contrato: una ruta aquí que no esté en `openapi.json`, o al revés, pone CI en rojo. Las de repositorios, biblioteca y búsqueda llegan con H2, H3 y H5 y entran aquí y en el contrato en el mismo commit que su código. Las Server Actions no van al contrato: se documentan en `docs/capabilities/`.
+Route Handlers bajo `/api/v1`. `scripts/verificar-docs.mjs` contrasta esta tabla contra el contrato: una ruta aquí que no esté en `openapi.json`, o al revés, pone CI en rojo. Las de detalle, datos personales y búsqueda llegan con H3 y H5 y entran aquí y en el contrato en el mismo commit que su código. Las Server Actions no van al contrato: se documentan en `docs/capabilities/`.
 
 | Método | Ruta                    | Auth |
 | ------ | ----------------------- | ---- |
@@ -79,7 +79,8 @@ Route Handlers bajo `/api/v1`. `scripts/verificar-docs.mjs` contrasta esta tabla
 - **`Repository` es global y `UserRepository` es privada** ([ADR-0008](docs/adr/0008-repository-global-y-userrepository-privada.md)). Un repositorio existe una vez aunque lo guarden mil usuarios. Notas, estado, rating, tags y colecciones de una persona **nunca** salen a otra. Toda query sobre `UserRepository` filtra por el usuario de la sesión, nunca por un `userId` que venga del cliente.
 - **La IA opera sobre `Repository` y se cachea** ([ADR-0009](docs/adr/0009-proveedor-de-ia-reemplazable.md)): un análisis por repositorio, reutilizado por todos los usuarios, salvo que el repositorio cambie, el análisis caduque o se fuerce. El proveedor se elige por variables `AI_*` y nunca se hardcodea un modelo.
 - **Las URLs se normalizan y el identificador estable es el id de GitHub**: `github.com/owner/repo`, con `/`, con `.git` o con query, terminan en la misma `Repository`.
-- **Los trabajos son idempotentes y viven en PostgreSQL** ([ADR-0010](docs/adr/0010-cola-de-trabajos-en-postgresql.md)): sin Redis, sin microservicios.
+- **Los trabajos son idempotentes y viven en PostgreSQL** ([ADR-0010](docs/adr/0010-cola-de-trabajos-en-postgresql.md)): tabla propia `background_jobs` tomada con `FOR UPDATE SKIP LOCKED` (`packages/db/src/queue.ts`); sin Redis, sin microservicios.
+- **GitHub se llama solo con `owner/name` normalizado y a través de `GitHubProvider`** (`packages/github`); con `GITHUB_FAKE=1` no hay red. El token no sale del servidor.
 
 ### Decisiones que el código no explica solo
 

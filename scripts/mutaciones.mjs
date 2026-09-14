@@ -212,7 +212,12 @@ const CATALOGO = [
     id: 'repositorio-unico',
     que: 'cada cuenta que guarda un repositorio vuelve a pedirlo a GitHub y crea otra fila global',
     fichero: 'apps/web/src/modules/repositories/service.ts',
-    cambios: [['  let repositoryId = await findRepositoryId(db, ref.fullName)\n', '  let repositoryId = null\n']],
+    cambios: [
+      [
+        '  let repositoryId = await findRepositoryId(db, ref.fullName)\n',
+        '  let repositoryId = null\n',
+      ],
+    ],
     muerden: [
       [
         pruebas('repositories'),
