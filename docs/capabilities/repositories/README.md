@@ -11,7 +11,7 @@ En `apps/web/src/app/api/v1/repositories/route.ts`, envueltos en `handle()`. Con
 | Método y ruta               | Entrada                                                                                                   | Handler | Devuelve                                                                                         | Sesión |
 | --------------------------- | --------------------------------------------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------ | ------ |
 | `POST /api/v1/repositories` | `saveRepositorySchema`: `url`, `source?`                                                                  | `POST`  | `201 { data: UserRepository }`; `200` si ya estaba; `404` GitHub no lo conoce; `422` URL; `429`  | sí     |
-| `GET /api/v1/repositories`  | `libraryQuerySchema`: `status`, `favorite`, `language`, `license`, `minStars`, `sort`, `page`, `pageSize` | `GET`   | `200 { data: UserRepository[], meta: { total, page, pageSize } }`; `422` valor fuera del dominio | sí     |
+| `GET /api/v1/repositories`  | `libraryQuerySchema`: `status`, `favorite`, `language`, `license`, `minStars`, `sort`, `page`, `pageSize`; cualquier otro parámetro es `422` | `GET`   | `200 { data: UserRepository[], meta: { total, page, pageSize } }`; `422` valor fuera del dominio o parámetro desconocido | sí     |
 
 `UserRepository` es `{ id, repository, personal }` (`userRepositorySchema` en `packages/shared/src/schemas.ts`). `repository.analysis.status` es `PENDING`, `COMPLETED`, `FAILED` o `DISABLED`; `repository.categories` llega con H4. El README no viaja en la lista: es del detalle (H3).
 

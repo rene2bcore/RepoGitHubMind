@@ -35,7 +35,7 @@ test('registrarse, guardar un repositorio por URL, salir y volver a entrar', asy
   await page.getByRole('button', { name: 'Guardar' }).click()
   const card = page.getByTestId('repository-card').first()
   await expect(card).toContainText('pgvector / pgvector')
-  await expect(card).toContainText('⭐ 19,4k')
+  await expect(card).toContainText('⭐ 19.4k')
   await expect(card).toContainText('PostgreSQL')
   await expect(page.getByText('Todavía no has guardado ningún repositorio')).toHaveCount(0)
 

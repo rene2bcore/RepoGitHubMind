@@ -242,7 +242,8 @@ const sortColumn = {
  * specs/library · «Lista con orden y filtros» y «Biblioteca vacía». Solo las
  * relaciones de la cuenta con sesión. Los valores de orden y filtro ya
  * vienen validados por `libraryQuerySchema`: un valor fuera del dominio es un
- * 422 antes de llegar aquí (ADR-0005). El filtro por categoría entra con H4.
+ * 422 antes de llegar aquí (ADR-0005), y un parámetro desconocido también.
+ * El filtro por categoría entra con H4, en el esquema y aquí a la vez (H-08).
  */
 export async function listUserRepositories(
   userId: string,

@@ -57,10 +57,14 @@ export class RestGitHubProvider implements GitHubProvider {
     const base = `${API}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`
     const repo = (await this.get(base)) as RepoJson
 
+    // Sin README o sin releases es normal (404) y se guarda con nulos; un
+    // límite de GitHub en cualquiera de estas llamadas no se traga: sería un
+    // 201 con metadata incompleta indistinguible de un repositorio sin
+    // releases (revisión adversarial del PR #6).
     const [languages, readme, release] = await Promise.all([
-      this.get(`${base}/languages`).catch(() => ({})) as Promise<Record<string, number>>,
-      this.getText(`${base}/readme`, 'application/vnd.github.raw+json').catch(() => null),
-      this.get(`${base}/releases/latest`).catch(() => null) as Promise<ReleaseJson | null>,
+      this.get(`${base}/languages`).catch(optional({})) as Promise<Record<string, number>>,
+      this.getText(`${base}/readme`, 'application/vnd.github.raw+json').catch(optional(null)),
+      this.get(`${base}/releases/latest`).catch(optional(null)) as Promise<ReleaseJson | null>,
     ])
 
     return {
@@ -120,6 +124,14 @@ export class RestGitHubProvider implements GitHubProvider {
     }
     if (res.status === 404) throw new RepositoryNotFoundError()
     throw new Error(`GitHub respondió ${res.status} a ${new URL(url).pathname}`)
+  }
+}
+
+/** Devuelve `fallback` salvo que el error sea el límite de GitHub, que se relanza. */
+function optional<T>(fallback: T): (error: unknown) => T {
+  return (error) => {
+    if (error instanceof GitHubRateLimitError) throw error
+    return fallback
   }
 }
 
