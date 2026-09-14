@@ -113,7 +113,8 @@ test('registrarse, guardar un repositorio por URL, anotarlo, salir y volver a en
   await expect(page.getByTestId('repository-card').first()).toContainText('pgvector / pgvector')
   // Una categoría que el catálogo no conoce se dice, y el resto de filtros se conserva.
   await page.goto('/library?status=USING&category=quantum-finance')
-  await expect(page.getByRole('alert')).toContainText('category')
+  // Por su texto: el anunciador de rutas de Next también es un `alert`.
+  await expect(page.getByText('Orden o filtro no válido (category')).toBeVisible()
   await expect(page.getByTestId('repository-card')).toHaveCount(1)
 
   // 6. Salir invalida la sesión: la biblioteca vuelve a pedir acceso.

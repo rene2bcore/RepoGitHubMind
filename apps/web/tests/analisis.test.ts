@@ -318,6 +318,7 @@ describe('análisis de IA', () => {
     expect(data.repository.categories).toEqual([
       { slug: 'cli', name: 'CLI', path: 'developer-tools/cli' },
     ])
-    expect(texto).not.toMatch(/aiConfidence|0\.9/)
+    // Como valor JSON, no como texto suelto: «50.912Z» en un timestamp contiene «0.9».
+    expect(texto).not.toMatch(/"aiConfidence"|:0\.9[,}]/)
   })
 })
