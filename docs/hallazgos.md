@@ -23,17 +23,18 @@ La severidad no se escribe: es un criterio que quien escribe inventa. El orden e
 
 ## Índice
 
-| #    | Hallazgo                                                                               | Estado                                                             |
-| ---- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| H-01 | CI no puede ejecutar lint, tipos, pruebas ni contrato hasta que exista código          | Resuelto · `feat/RGM-2-cuentas-y-sesion` 2026-09-14                |
-| H-02 | El hook de formato del harness rompía toda escritura al llegar con placeholders        | Resuelto · `main` 2026-09-14                                       |
-| H-03 | El merge de historias entre producto y fork pisaría `readme.md` en Windows             | Resuelto · ADR-0012, 2026-09-14                                    |
-| H-04 | Los componentes de `components/ui/` están escritos a mano, no traídos con `shadcn add` | Deuda aceptada, con fecha de cierre: Entrega final                 |
-| H-05 | Los puertos 5432 y 5433 del host ya estaban ocupados por otros contenedores            | Resuelto · `feat/RGM-2-cuentas-y-sesion` 2026-09-14                |
-| H-06 | Drizzle envuelve el error del driver y el código SQLSTATE no está en el nivel superior | Resuelto · `feat/RGM-2-cuentas-y-sesion` 2026-09-14                |
-| H-07 | El rate limit se evadía rotando `x-forwarded-for`, que cualquiera escribe              | Resuelto · `fix/RGM-2-rate-limit-por-cuenta` 2026-09-14            |
-| H-08 | La lista aceptaba y documentaba un filtro `category` que no filtraba                   | Resuelto · `fix/RGM-3-filtro-categoria-y-limite-github` 2026-09-14 |
-| H-09 | Todas las capturas de `docs/evidencia/` llevaban el aviso «1 Issue» de Next            | Resuelto · `docs/capturas-produccion` (PR #11) 2026-09-14          |
+| #    | Hallazgo                                                                                | Estado                                                             |
+| ---- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| H-01 | CI no puede ejecutar lint, tipos, pruebas ni contrato hasta que exista código           | Resuelto · `feat/RGM-2-cuentas-y-sesion` 2026-09-14                |
+| H-02 | El hook de formato del harness rompía toda escritura al llegar con placeholders         | Resuelto · `main` 2026-09-14                                       |
+| H-03 | El merge de historias entre producto y fork pisaría `readme.md` en Windows              | Resuelto · ADR-0012, 2026-09-14                                    |
+| H-04 | Los componentes de `components/ui/` están escritos a mano, no traídos con `shadcn add`  | Deuda aceptada, con fecha de cierre: Entrega final                 |
+| H-05 | Los puertos 5432 y 5433 del host ya estaban ocupados por otros contenedores             | Resuelto · `feat/RGM-2-cuentas-y-sesion` 2026-09-14                |
+| H-06 | Drizzle envuelve el error del driver y el código SQLSTATE no está en el nivel superior  | Resuelto · `feat/RGM-2-cuentas-y-sesion` 2026-09-14                |
+| H-07 | El rate limit se evadía rotando `x-forwarded-for`, que cualquiera escribe               | Resuelto · `fix/RGM-2-rate-limit-por-cuenta` 2026-09-14            |
+| H-08 | La lista aceptaba y documentaba un filtro `category` que no filtraba                    | Resuelto · `fix/RGM-3-filtro-categoria-y-limite-github` 2026-09-14 |
+| H-09 | Todas las capturas de `docs/evidencia/` llevaban el aviso «1 Issue» de Next             | Resuelto · `docs/capturas-produccion` (PR #11) 2026-09-14          |
+| H-10 | El detalle de un repositorio desbordaba en horizontal en móvil con un README con código | Resuelto · `feat/RGM-6-busqueda-hibrida` 2026-09-14                |
 
 ## Plantilla de entrada
 
@@ -200,6 +201,22 @@ Con H4 (`feat/RGM-5-analisis-ia`, 2026-09-14) `category` vuelve al esquema y al 
 **Estado:** Resuelto en `docs/capturas-produccion` (PR #11) el 2026-09-14: capturas contra la imagen de producción y tras `networkidle`. `feat/RGM-5-analisis-ia` había llegado a lo mismo con `caret: 'initial'`; al integrar `main` se portó sobre la versión del PR #11 y las capturas de H4 se regeneraron con `next start`, la IA falsa y el worker.
 
 **Qué lo vigila:** nada automático. `capturas.ts` no corre en CI; la regresión solo se ve mirando las capturas, y el comentario de `foto()` dice por qué se captura contra producción.
+
+## H-10 · El detalle de un repositorio desbordaba en horizontal en móvil con un README con código
+
+**Rama:** `feat/RGM-6-busqueda-hibrida` sobre `main` tras el PR #12 · **Fecha:** 2026-09-14 · **Origen:** el E2E de H5 en rojo en el proyecto `movil`
+
+En `/repositories/{id}`, la rejilla de una columna del móvil tomaba como ancho mínimo el de su contenido, y la línea larga del bloque de instalación del README de pgvector la ensanchaba: con 412 px de viewport, la página medía 541 px, se desplazaba en horizontal y la navegación inferior quedaba bajo las tarjetas. El `overflow-x: auto` del bloque de código no servía, porque el bloque ya era tan ancho como su línea.
+
+**Cómo se verificó:** el flujo de H5 sale del detalle con «Salir» y Playwright no podía pulsarlo («subtree intercepts pointer events»); la traza mostraba la página desplazada. Aserción nueva sobre `scrollWidth` contra el viewport del dispositivo: 541 frente a 412 con el código anterior, en verde con `min-w-0` en las dos columnas de la rejilla. Comparada con `window.innerWidth` pasaba con el defecto puesto, porque en móvil el viewport de layout crece con lo que desborda.
+
+**Reproducción:** quitar `min-w-0` de las dos columnas de `apps/web/src/app/(app)/repositories/[id]/page.tsx` y ejecutar `pnpm --filter web exec playwright test --project=movil`.
+
+**Daño:** en un teléfono, el detalle de cualquier repositorio con un bloque de código largo en el README se veía cortado y la navegación no respondía donde se veía · **Radio:** 1 sitio: `apps/web/src/app/(app)/repositories/[id]/page.tsx` (la rejilla `grid gap-4 md:grid-cols-3`) · **Reversibilidad:** sí · **Precedencia:** ninguna
+
+**Estado:** Resuelto en `feat/RGM-6-busqueda-hibrida` el 2026-09-14.
+
+**Qué lo vigila:** `apps/web/e2e/flujo.e2e.ts` · la aserción de `scrollWidth` en el detalle, en el proyecto `movil`.
 
 ## Procedimiento al cambiar de rama base
 

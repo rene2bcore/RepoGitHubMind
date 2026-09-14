@@ -82,6 +82,13 @@ test('registrarse, guardar un repositorio por URL, anotarlo, salir y volver a en
   ).toBeVisible()
   await expect(page.getByText('Riesgo de abandono · Valoración heurística')).toBeVisible()
   await expect(page.getByTestId('readme')).toContainText('pgvector')
+  // En móvil, la línea larga de un bloque de código del README no ensancha la
+  // página: se desplaza dentro del bloque (H-10). Se compara con el viewport
+  // del dispositivo y no con `innerWidth`, que en móvil crece con lo que
+  // desborda y haría pasar la comprobación con el defecto puesto.
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+    page.viewportSize()!.width,
+  )
   await page.getByLabel('Notas').fill('Probar el índice HNSW con embeddings')
   await page.getByRole('button', { name: '4 de 5' }).click()
   await page.getByRole('button', { name: 'Guardar mis datos' }).click()
