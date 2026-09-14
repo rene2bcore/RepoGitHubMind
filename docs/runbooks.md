@@ -8,16 +8,16 @@
 
 ## Índice
 
-| Síntoma | Sección |
-|---|---|
-| No arranca, puerto ocupado, la base no responde | [1 · Entorno local](#1--entorno-local) |
-| Un job de «Verificación» en rojo | [2 · CI: Verificación](#2--ci-verificación) |
-| El revisor adversarial en rojo, o en verde sin informe | [3 · CI: Revisión adversarial](#3--ci-revisión-adversarial) |
-| Hay que renovar la credencial del revisor | [4 · Rotar la credencial del revisor](#4--rotar-la-credencial-del-revisor) |
-| Un commit roto ya empujado, o rechazado por el hook | [5 · Recuperación en git](#5--recuperación-en-git) |
-| Hay que llevar una entrega al fork académico | [6 · Entrega al fork](#6--entrega-al-fork) |
-| Se quiere desplegar | [7 · Despliegue](#7--despliegue) |
-| Monitoreo e incidentes | [8 · Monitoreo y guardia](#8--monitoreo-y-guardia) |
+| Síntoma                                                | Sección                                                                    |
+| ------------------------------------------------------ | -------------------------------------------------------------------------- |
+| No arranca, puerto ocupado, la base no responde        | [1 · Entorno local](#1--entorno-local)                                     |
+| Un job de «Verificación» en rojo                       | [2 · CI: Verificación](#2--ci-verificación)                                |
+| El revisor adversarial en rojo, o en verde sin informe | [3 · CI: Revisión adversarial](#3--ci-revisión-adversarial)                |
+| Hay que renovar la credencial del revisor              | [4 · Rotar la credencial del revisor](#4--rotar-la-credencial-del-revisor) |
+| Un commit roto ya empujado, o rechazado por el hook    | [5 · Recuperación en git](#5--recuperación-en-git)                         |
+| Hay que llevar una entrega al fork académico           | [6 · Entrega al fork](#6--entrega-al-fork)                                 |
+| Se quiere desplegar                                    | [7 · Despliegue](#7--despliegue)                                           |
+| Monitoreo e incidentes                                 | [8 · Monitoreo y guardia](#8--monitoreo-y-guardia)                         |
 
 ---
 
@@ -53,7 +53,7 @@ La base de pruebas puede haber quedado con tablas a medias. `pnpm db:reset:test`
 ### La web dice «No se pudo conectar»
 
 1. ¿Está `postgres` arriba y `web` arrancado? `curl http://localhost:3000/api/health`.
-2. ¿`AUTH_URL` en `.env` es `http://localhost:3000`? Tras cambiarla, reinicia: Auth.js la lee al arrancar.
+2. ¿`AUTH_URL` en `.env` es `http://localhost:3000`? Tras cambiarla, reinicia: la app la lee al arrancar y decide con ella si la cookie lleva `Secure`.
 
 ---
 
@@ -72,35 +72,35 @@ Hasta que exista `package.json`, los jobs `verificar` y `navegador` se omiten y 
 
 ### Lint, tipos, formato, auditoría y pruebas
 
-| Mensaje | Qué pasó | Qué hacer |
-|---|---|---|
-| Una prueba en rojo | Lo que dice | Reproducir en local con `pnpm vitest run <fichero>`. Un bug no se cierra sin reproducirlo |
-| `recuento de pruebas: CLAUDE.md dice N y el runner ejecutó M` | Se añadió o quitó una prueba y `CLAUDE.md` no se actualizó | Actualizar total **y desglose** en `CLAUDE.md`. Es el único sitio con el número |
-| Lint, tipos o formato | Lo que dice | `pnpm lint`, `pnpm typecheck`, `pnpm format` en local y commitear |
-| «Sin vulnerabilidades altas» | `pnpm audit` encontró una alta o crítica | Primero relanzar: consulta el registro y puede fallar por red. Si se repite, `pnpm audit --fix` **sin** forzar; si solo se arregla con un salto de versión mayor, se decide y se registra |
-| «El contrato versionado sigue al día» | Alguien tocó un Route Handler o un esquema Zod sin regenerar | `pnpm openapi:generate`, revisar el diff de `docs/api/openapi.json`, commitear. Si el diff no era esperado, el cambio de código es el problema |
+| Mensaje                                                       | Qué pasó                                                     | Qué hacer                                                                                                                                                                                 |
+| ------------------------------------------------------------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Una prueba en rojo                                            | Lo que dice                                                  | Reproducir en local con `pnpm vitest run <fichero>`. Un bug no se cierra sin reproducirlo                                                                                                 |
+| `recuento de pruebas: CLAUDE.md dice N y el runner ejecutó M` | Se añadió o quitó una prueba y `CLAUDE.md` no se actualizó   | Actualizar total **y desglose** en `CLAUDE.md`. Es el único sitio con el número                                                                                                           |
+| Lint, tipos o formato                                         | Lo que dice                                                  | `pnpm lint`, `pnpm typecheck`, `pnpm format` en local y commitear                                                                                                                         |
+| «Sin vulnerabilidades altas»                                  | `pnpm audit` encontró una alta o crítica                     | Primero relanzar: consulta el registro y puede fallar por red. Si se repite, `pnpm audit --fix` **sin** forzar; si solo se arregla con un salto de versión mayor, se decide y se registra |
+| «El contrato versionado sigue al día»                         | Alguien tocó un Route Handler o un esquema Zod sin regenerar | `pnpm openapi:generate`, revisar el diff de `docs/api/openapi.json`, commitear. Si el diff no era esperado, el cambio de código es el problema                                            |
 
 ### Las comprobaciones muerden (R-14)
 
 `scripts/mutaciones.mjs` reintroduce defectos que ya existieron y exige que cada comprobación se ponga en rojo **nombrando** el motivo.
 
-| Salida | Qué significa | Qué hacer |
-|---|---|---|
-| `ROJO sin mutar · <comprobación>` | Ya estaba roja antes de mutar nada | Arreglar eso primero: sin un verde de partida ningún rojo demuestra nada |
-| `NO APLICA <id>` | El código cambió y el texto que la mutación busca ya no aparece exactamente una vez | Actualizar la entrada del catálogo al código nuevo, **y comprobar que el arreglo sigue ahí** |
-| `SOBREVIVE <comprobación>` | Con el defecto puesto, sigue en verde | Es un hallazgo: la comprobación ya no protege lo que dice. Registrarlo en `docs/hallazgos.md` antes de tocar nada |
-| `ROJO POR OTRO MOTIVO` | Falló, pero no por lo que la entrada dice | Leer el volcado que sigue. Suele ser la marca de fallo del runner, distinta en Windows y Linux |
+| Salida                            | Qué significa                                                                       | Qué hacer                                                                                                         |
+| --------------------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `ROJO sin mutar · <comprobación>` | Ya estaba roja antes de mutar nada                                                  | Arreglar eso primero: sin un verde de partida ningún rojo demuestra nada                                          |
+| `NO APLICA <id>`                  | El código cambió y el texto que la mutación busca ya no aparece exactamente una vez | Actualizar la entrada del catálogo al código nuevo, **y comprobar que el arreglo sigue ahí**                      |
+| `SOBREVIVE <comprobación>`        | Con el defecto puesto, sigue en verde                                               | Es un hallazgo: la comprobación ya no protege lo que dice. Registrarlo en `docs/hallazgos.md` antes de tocar nada |
+| `ROJO POR OTRO MOTIVO`            | Falló, pero no por lo que la entrada dice                                           | Leer el volcado que sigue. Suele ser la marca de fallo del runner, distinta en Windows y Linux                    |
 
 Para repetir una sola: `node scripts/mutaciones.mjs <id>`. Para ver el catálogo: `--listar`. El script restaura los ficheros al terminar, también con `Ctrl-C`.
 
 ### La documentación corresponde con el código
 
-| Paso | Mensaje | Qué hacer |
-|---|---|---|
-| Contrastar documentación contra código | Líneas `FALLA  <comprobación> · <detalle>` | Cada comprobación de `scripts/verificar-docs.mjs` explica en su comentario qué defecto previene. Arreglar el código o el documento, el que mienta |
-| Placeholders sin rellenar | `fichero:línea` | Rellenar o borrar |
-| El hook de rama / de mensaje | `scripts/probar-hook-*.mjs` | Alguien cambió `.githooks/`. Ver sus casos en el script |
-| Todo fix deja una prueba (R-08) | `FALLA <sha> fix: ... · no toca ninguna prueba` | Si el arreglo tiene prueba, falta en el commit. Si no puede tenerla, el mensaje necesita `Sin-prueba: <motivo>`. Como el historial no se reescribe, se hace con un commit nuevo |
+| Paso                                   | Mensaje                                         | Qué hacer                                                                                                                                                                       |
+| -------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Contrastar documentación contra código | Líneas `FALLA  <comprobación> · <detalle>`      | Cada comprobación de `scripts/verificar-docs.mjs` explica en su comentario qué defecto previene. Arreglar el código o el documento, el que mienta                               |
+| Placeholders sin rellenar              | `fichero:línea`                                 | Rellenar o borrar                                                                                                                                                               |
+| El hook de rama / de mensaje           | `scripts/probar-hook-*.mjs`                     | Alguien cambió `.githooks/`. Ver sus casos en el script                                                                                                                         |
+| Todo fix deja una prueba (R-08)        | `FALLA <sha> fix: ... · no toca ninguna prueba` | Si el arreglo tiene prueba, falta en el commit. Si no puede tenerla, el mensaje necesita `Sin-prueba: <motivo>`. Como el historial no se reescribe, se hace con un commit nuevo |
 
 ---
 
@@ -108,15 +108,15 @@ Para repetir una sola: `node scripts/mutaciones.mjs <id>`. Para ver el catálogo
 
 `revision-adversarial.yml`. **No bloquea**: su trabajo es informar. Sus estados significan cosas distintas.
 
-| Estado | Resumen del job | Significado | Qué hacer |
-|---|---|---|---|
-| Verde | «sin credencial de Claude: se omite la revisión» | No hay secreto configurado | No debería pasar: el secreto está desde el 2026-09-14. Ver [sección 4](#4--rotar-la-credencial-del-revisor) |
-| Verde | «la rama no tiene PR abierto» | La rama no es un cambio propuesto | Nada. Abre el PR si quieres revisión |
-| Verde | El informe con Graves y Menores | Revisó | **Leerlo.** Un grave se reproduce antes de arreglarlo |
-| Rojo | «La revisión adversarial no pudo ejecutarse» con `401` | Credencial inválida o caducada | [Sección 4](#4--rotar-la-credencial-del-revisor) |
-| Rojo | `Reached max turns` | El diff es demasiado grande para 40 turnos | Partir la unidad de trabajo. Por encima de ~6000 líneas el job ya avisa |
-| Rojo | Herramienta desconocida en `--disallowed-tools` | La versión fijada del CLI (2.1.252) no conoce una herramienta de la lista | Comprobar la lista contra la versión instalada antes de subir el CLI |
-| Rojo por `timeout-minutes` | Cancelado | Algo se colgó | Relanzar. Si se repite, leer el log del paso «Revisar» |
+| Estado                     | Resumen del job                                        | Significado                                                               | Qué hacer                                                                                                   |
+| -------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Verde                      | «sin credencial de Claude: se omite la revisión»       | No hay secreto configurado                                                | No debería pasar: el secreto está desde el 2026-09-14. Ver [sección 4](#4--rotar-la-credencial-del-revisor) |
+| Verde                      | «la rama no tiene PR abierto»                          | La rama no es un cambio propuesto                                         | Nada. Abre el PR si quieres revisión                                                                        |
+| Verde                      | El informe con Graves y Menores                        | Revisó                                                                    | **Leerlo.** Un grave se reproduce antes de arreglarlo                                                       |
+| Rojo                       | «La revisión adversarial no pudo ejecutarse» con `401` | Credencial inválida o caducada                                            | [Sección 4](#4--rotar-la-credencial-del-revisor)                                                            |
+| Rojo                       | `Reached max turns`                                    | El diff es demasiado grande para 40 turnos                                | Partir la unidad de trabajo. Por encima de ~6000 líneas el job ya avisa                                     |
+| Rojo                       | Herramienta desconocida en `--disallowed-tools`        | La versión fijada del CLI (2.1.252) no conoce una herramienta de la lista | Comprobar la lista contra la versión instalada antes de subir el CLI                                        |
+| Rojo por `timeout-minutes` | Cancelado                                              | Algo se colgó                                                             | Relanzar. Si se repite, leer el log del paso «Revisar»                                                      |
 
 Para relanzarlo sin commit:
 

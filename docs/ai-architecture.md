@@ -22,7 +22,7 @@ export interface AIProvider {
 
 // packages/ai/src/registry.ts
 export class AIProviderRegistry {
-  static fromEnv(env: AIEnv): AIProviderRegistry   // AI_PROVIDER, AI_EMBEDDING_PROVIDER
+  static fromEnv(env: AIEnv): AIProviderRegistry // AI_PROVIDER, AI_EMBEDDING_PROVIDER
   analysis(): AIProvider
   embedding(): AIProvider
 }
@@ -32,14 +32,14 @@ Implementaciones previstas, en este orden: OpenRouter (cubre varios modelos con 
 
 ### Variables
 
-| Variable | Qué |
-|---|---|
-| `AI_ANALYSIS_ENABLED` | Interruptor global |
-| `AI_PROVIDER`, `AI_MODEL_ANALYSIS` | Proveedor y modelo del análisis |
+| Variable                                      | Qué                                                                                                                 |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `AI_ANALYSIS_ENABLED`                         | Interruptor global                                                                                                  |
+| `AI_PROVIDER`, `AI_MODEL_ANALYSIS`            | Proveedor y modelo del análisis                                                                                     |
 | `AI_EMBEDDING_PROVIDER`, `AI_MODEL_EMBEDDING` | Proveedor y modelo de embeddings. Cambiar el modelo obliga a revectorizar: la dimensión está en el esquema (`PA-3`) |
-| `AI_API_KEY` | Clave del proveedor. Solo servidor |
-| `AI_MAX_README_CHARS` | Truncado del README antes de enviarlo |
-| `AI_ANALYSIS_TTL_DAYS` | Caducidad del análisis |
+| `AI_API_KEY`                                  | Clave del proveedor. Solo servidor                                                                                  |
+| `AI_MAX_README_CHARS`                         | Truncado del README antes de enviarlo                                                                               |
+| `AI_ANALYSIS_TTL_DAYS`                        | Caducidad del análisis                                                                                              |
 
 Fallback a un segundo proveedor: la abstracción lo admite; en la entrega hay uno configurado (§20).
 
@@ -99,12 +99,12 @@ Topes: README truncado, `max_tokens` en la petición, TTL del análisis, un aná
 
 ## Fallos
 
-| Fallo | Qué ve el usuario | Qué hace el sistema |
-|---|---|---|
+| Fallo                            | Qué ve el usuario                     | Qué hace el sistema                                                               |
+| -------------------------------- | ------------------------------------- | --------------------------------------------------------------------------------- |
 | Proveedor caído o clave inválida | «Análisis no disponible · Reintentar» | El trabajo queda `FAILED` con `last_error`; el repositorio está guardado y usable |
-| Respuesta que no valida | Igual | Un reintento pidiendo corrección; después `FAILED` |
-| `AI_ANALYSIS_ENABLED=false` | «Análisis desactivado» | `DISABLED`, sin llamadas ni coste; la búsqueda funciona en modo léxico |
-| Rate limit del proveedor | Nada: el análisis llega más tarde | Backoff en la cola |
+| Respuesta que no valida          | Igual                                 | Un reintento pidiendo corrección; después `FAILED`                                |
+| `AI_ANALYSIS_ENABLED=false`      | «Análisis desactivado»                | `DISABLED`, sin llamadas ni coste; la búsqueda funciona en modo léxico            |
+| Rate limit del proveedor         | Nada: el análisis llega más tarde     | Backoff en la cola                                                                |
 
 ## Lo que no se hace
 

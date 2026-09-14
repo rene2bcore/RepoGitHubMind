@@ -14,12 +14,12 @@ Este harness funciona con [OpenSpec](https://github.com/Fission-AI/OpenSpec) (`o
 
 El flujo, y el orden importa:
 
-| Paso | Qué produce |
-|---|---|
-| Proponer | `proposal.md` (qué y por qué), `specs/<capability>/spec.md` (el delta), `design.md` (cómo), `tasks.md` (pasos) |
-| **Gate humano** | Revisar los cuatro artefactos **antes** de que exista una línea de código. Esto es el trabajo, no un trámite |
-| Aplicar | El código, acotado por grupos de tareas. Backend primero y frontend después, revisando en medio |
-| Archivar | Fusiona el delta contra la spec viva |
+| Paso            | Qué produce                                                                                                    |
+| --------------- | -------------------------------------------------------------------------------------------------------------- |
+| Proponer        | `proposal.md` (qué y por qué), `specs/<capability>/spec.md` (el delta), `design.md` (cómo), `tasks.md` (pasos) |
+| **Gate humano** | Revisar los cuatro artefactos **antes** de que exista una línea de código. Esto es el trabajo, no un trámite   |
+| Aplicar         | El código, acotado por grupos de tareas. Backend primero y frontend después, revisando en medio                |
+| Archivar        | Fusiona el delta contra la spec viva                                                                           |
 
 **Cuándo no usarlo**: escribir la spec de algo que ya existe es un antipatrón declarado. Es legítimo para poner al día una spec atrasada, pero invierte el orden: la spec deja de dirigir el trabajo y pasa a describirlo.
 
@@ -31,6 +31,7 @@ El flujo, y el orden importa:
 # nombre-de-la-capability Specification
 
 ## Purpose
+
 Para qué existe esta capability, en dos frases y en lenguaje de producto.
 
 ## Requirements

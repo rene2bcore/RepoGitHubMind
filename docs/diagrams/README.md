@@ -6,7 +6,7 @@ Esta carpeta es para diagramas que no encajan ahí: flujos de secuencia de un ca
 
 ## Plantilla
 
-```markdown
+````markdown
 # [Qué muestra]
 
 > Leído de `[fichero]` el AAAA-MM-DD. Lo que no se ha podido verificar leyendo ficheros no aparece.
@@ -24,6 +24,9 @@ sequenceDiagram
     A-->>F: 201 { data }
     F-->>U: [qué ve]
 ```
+````
+
 ```
 
 Sin comas dentro de las etiquetas de C4: Mermaid las interpreta como separador de argumentos.
+```

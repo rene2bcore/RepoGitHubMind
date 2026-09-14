@@ -8,14 +8,14 @@ Un VPS Ubuntu con Docker y Docker Compose, Cloudflare delante para DNS, HTTPS y 
 
 ## Lo que el código exige
 
-| | |
-|---|---|
-| Imágenes | `docker/Dockerfile.web` y `docker/Dockerfile.worker`, build multi-stage con `pnpm` y `NODE_ENV=production` |
-| Variables | Las de `.env.example` con valores reales en un `.env` del servidor, nunca en el repositorio. `AUTH_URL` con el dominio real, `AUTH_SECRET` propio, `AI_API_KEY`, `GITHUB_TOKEN` opcional, `DEBUG_HTTP_ERRORS=false`, `LOG_LEVEL=info` |
-| Base de datos | `pnpm db:migrate` antes de arrancar `web` y `worker`, en el mismo despliegue. Una migración que borra datos no se deshace: backup antes |
-| Arranque | `docker compose -f docker/docker-compose.yml --profile prod up -d` |
-| Vuelta atrás | Desplegar la imagen anterior y restaurar el backup si la migración lo exige |
-| Salud | `GET /api/health` (roadmap: no toca la base) para Cloudflare y para el propio compose |
+|               |                                                                                                                                                                                                                                       |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Imágenes      | `docker/Dockerfile.web` y `docker/Dockerfile.worker`, build multi-stage con `pnpm` y `NODE_ENV=production`                                                                                                                            |
+| Variables     | Las de `.env.example` con valores reales en un `.env` del servidor, nunca en el repositorio. `AUTH_URL` con el dominio real, `AUTH_SECRET` propio, `AI_API_KEY`, `GITHUB_TOKEN` opcional, `DEBUG_HTTP_ERRORS=false`, `LOG_LEVEL=info` |
+| Base de datos | `pnpm db:migrate` antes de arrancar `web` y `worker`, en el mismo despliegue. Una migración que borra datos no se deshace: backup antes                                                                                               |
+| Arranque      | `docker compose -f docker/docker-compose.yml --profile prod up -d`                                                                                                                                                                    |
+| Vuelta atrás  | Desplegar la imagen anterior y restaurar el backup si la migración lo exige                                                                                                                                                           |
+| Salud         | `GET /api/health` (roadmap: no toca la base) para Cloudflare y para el propio compose                                                                                                                                                 |
 
 ## Cloudflare
 

@@ -1,0 +1,22 @@
+{
+  "name": "@rgm/shared",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@asteasolutions/zod-to-openapi": "^9.1.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@rgm/config": "workspace:*",
+    "@types/node": "^24.13.2",
+    "typescript": "~6.0.3"
+  }
+}

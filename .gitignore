@@ -44,3 +44,10 @@ docs/plans/
 
 # Herramienta local de configuracion: no es parte del producto
 core-harness/
+
+# Next.js y artefactos de pruebas
+.next/
+next-env.d.ts
+*.tsbuildinfo
+**/test-results/
+**/playwright-report/

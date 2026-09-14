@@ -1,0 +1,22 @@
+{
+  "extends": "@rgm/config/tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["DOM", "DOM.Iterable", "ES2023"],
+    "jsx": "preserve",
+    "allowJs": true,
+    "incremental": true,
+    "plugins": [{ "name": "next" }],
+    "paths": { "@/*": ["./src/*"] },
+    "types": ["node"]
+  },
+  "include": [
+    "next-env.d.ts",
+    "src",
+    "tests",
+    "e2e",
+    "scripts",
+    "playwright.config.ts",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
+}

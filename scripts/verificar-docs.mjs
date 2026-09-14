@@ -97,7 +97,9 @@ comprobar('No queda ningún placeholder del harness sin rellenar', () => {
     })
   }
   if (conMarca.length) {
-    throw new Error(`placeholders sin rellenar: ${conMarca.slice(0, 10).join(', ')}${conMarca.length > 10 ? ` y ${conMarca.length - 10} más` : ''}`)
+    throw new Error(
+      `placeholders sin rellenar: ${conMarca.slice(0, 10).join(', ')}${conMarca.length > 10 ? ` y ${conMarca.length - 10} más` : ''}`,
+    )
   }
   return 'ninguno'
 })
@@ -166,9 +168,13 @@ comprobar('La matriz de trazabilidad tiene filas y cada fila sus columnas', () =
   // ir en blanco («sin prueba», «no construido»): el hueco es información;
   // la fila corta, no.
   const texto = leer('docs/traceability.md')
-  const cabecera = texto.match(/^\|\s*Ticket[^\n]*\|\s*Historia[^\n]*\|\s*Criterio[^\n]*\|\s*Spec[^\n]*\|\s*Prueba[^\n]*\|\s*C[oó]digo[^\n]*\|\s*$/m)
+  const cabecera = texto.match(
+    /^\|\s*Ticket[^\n]*\|\s*Historia[^\n]*\|\s*Criterio[^\n]*\|\s*Spec[^\n]*\|\s*Prueba[^\n]*\|\s*C[oó]digo[^\n]*\|\s*$/m,
+  )
   if (!cabecera) {
-    throw new Error('no se encuentra la cabecera `| Ticket | Historia | Criterio | Spec | Prueba | Código |`')
+    throw new Error(
+      'no se encuentra la cabecera `| Ticket | Historia | Criterio | Spec | Prueba | Código |`',
+    )
   }
   const desde = texto.indexOf(cabecera[0])
   // La tabla termina en la primera línea que no empieza por `|`: lo que venga
@@ -222,7 +228,10 @@ comprobar('Ningún .env.example trae un valor que parezca real', () => {
       const [, clave, valorCrudo] = m
       const valor = valorCrudo.replace(/^['"]|['"]$/g, '').trim()
       if (formasDeToken.test(valor)) sospechosos.push(`${f}:${i + 1} ${clave}`)
-      else if (/(SECRET|TOKEN|PASSWORD|KEY|PRIVATE)/.test(clave) && /^[A-Za-z0-9+/=_-]{32,}$/.test(valor)) {
+      else if (
+        /(SECRET|TOKEN|PASSWORD|KEY|PRIVATE)/.test(clave) &&
+        /^[A-Za-z0-9+/=_-]{32,}$/.test(valor)
+      ) {
         sospechosos.push(`${f}:${i + 1} ${clave}`)
       }
     }
@@ -242,8 +251,8 @@ comprobar('La tabla de rutas de CLAUDE.md corresponde con el contrato', () => {
   // fuerte que contra el contrato.
   const documentadas = new Set(
     [...leer('CLAUDE.md').matchAll(/^\|\s*(GET|POST|PATCH|PUT|DELETE)\s*\|\s*`([^`]+)`/gm)].map(
-      (m) => `${m[1]} ${m[2].replace(/\{([^}]+)\}/g, ':$1')}`
-    )
+      (m) => `${m[1]} ${m[2].replace(/\{([^}]+)\}/g, ':$1')}`,
+    ),
   )
   if (!documentadas.size) throw new Error('no se encuentra la tabla de rutas en CLAUDE.md')
 
@@ -252,8 +261,8 @@ comprobar('La tabla de rutas de CLAUDE.md corresponde con el contrato', () => {
     Object.entries(contrato.paths ?? {}).flatMap(([ruta, ops]) =>
       Object.keys(ops)
         .filter((m) => /^(get|post|put|patch|delete)$/i.test(m))
-        .map((m) => `${m.toUpperCase()} ${ruta.replace(/\{([^}]+)\}/g, ':$1')}`)
-    )
+        .map((m) => `${m.toUpperCase()} ${ruta.replace(/\{([^}]+)\}/g, ':$1')}`),
+    ),
   )
   if (!enContrato.size) throw new Error('el contrato no declara ninguna operación')
 
@@ -265,41 +274,48 @@ comprobar('La tabla de rutas de CLAUDE.md corresponde con el contrato', () => {
   return `${enContrato.size} rutas`
 })
 
-comprobar('El contrato no repite ningún parámetro ni deja sin seguridad una operación protegida', () => {
-  // OpenAPI exige que la pareja `name` + `in` sea única dentro de una
-  // operación. Y `security: []` **no** es «no se ha dicho nada» sino «esta
-  // ruta es pública»: en el origen, el contrato declaró públicas dos rutas
-  // protegidas durante un día. Las rutas protegidas se declaran en CLAUDE.md
-  // con «sí» en la columna Auth, y aquí se contrastan.
-  const contrato = JSON.parse(leer('docs/api/openapi.json'))
-  const protegidas = new Set(
-    [...leer('CLAUDE.md').matchAll(/^\|\s*(GET|POST|PATCH|PUT|DELETE)\s*\|\s*`([^`]+)`\s*\|\s*s[ií]\s*\|/gim)].map(
-      (m) => `${m[1].toUpperCase()} ${m[2].replace(/\{([^}]+)\}/g, ':$1')}`
+comprobar(
+  'El contrato no repite ningún parámetro ni deja sin seguridad una operación protegida',
+  () => {
+    // OpenAPI exige que la pareja `name` + `in` sea única dentro de una
+    // operación. Y `security: []` **no** es «no se ha dicho nada» sino «esta
+    // ruta es pública»: en el origen, el contrato declaró públicas dos rutas
+    // protegidas durante un día. Las rutas protegidas se declaran en CLAUDE.md
+    // con «sí» en la columna Auth, y aquí se contrastan.
+    const contrato = JSON.parse(leer('docs/api/openapi.json'))
+    const protegidas = new Set(
+      [
+        ...leer('CLAUDE.md').matchAll(
+          /^\|\s*(GET|POST|PATCH|PUT|DELETE)\s*\|\s*`([^`]+)`\s*\|\s*s[ií]\s*\|/gim,
+        ),
+      ].map((m) => `${m[1].toUpperCase()} ${m[2].replace(/\{([^}]+)\}/g, ':$1')}`),
     )
-  )
 
-  const repetidos = []
-  const publicasQueNo = []
-  for (const [ruta, operaciones] of Object.entries(contrato.paths ?? {})) {
-    for (const [metodo, operacion] of Object.entries(operaciones)) {
-      if (!/^(get|post|put|patch|delete)$/i.test(metodo)) continue
-      const clave = `${metodo.toUpperCase()} ${ruta.replace(/\{([^}]+)\}/g, ':$1')}`
-      const vistos = new Set()
-      for (const { name, in: donde } of operacion.parameters ?? []) {
-        const k = `${donde}:${name}`
-        if (vistos.has(k)) repetidos.push(`${clave} -> ${k}`)
-        vistos.add(k)
-      }
-      if (protegidas.has(clave)) {
-        const seguridad = operacion.security ?? contrato.security ?? []
-        if (!seguridad.length) publicasQueNo.push(clave)
+    const repetidos = []
+    const publicasQueNo = []
+    for (const [ruta, operaciones] of Object.entries(contrato.paths ?? {})) {
+      for (const [metodo, operacion] of Object.entries(operaciones)) {
+        if (!/^(get|post|put|patch|delete)$/i.test(metodo)) continue
+        const clave = `${metodo.toUpperCase()} ${ruta.replace(/\{([^}]+)\}/g, ':$1')}`
+        const vistos = new Set()
+        for (const { name, in: donde } of operacion.parameters ?? []) {
+          const k = `${donde}:${name}`
+          if (vistos.has(k)) repetidos.push(`${clave} -> ${k}`)
+          vistos.add(k)
+        }
+        if (protegidas.has(clave)) {
+          const seguridad = operacion.security ?? contrato.security ?? []
+          if (!seguridad.length) publicasQueNo.push(clave)
+        }
       }
     }
-  }
-  if (repetidos.length) throw new Error(`parámetros repetidos: ${[...new Set(repetidos)].join(', ')}`)
-  if (publicasQueNo.length) throw new Error(`el contrato las declara públicas: ${publicasQueNo.join(', ')}`)
-  return `${protegidas.size} rutas protegidas con esquema de seguridad`
-})
+    if (repetidos.length)
+      throw new Error(`parámetros repetidos: ${[...new Set(repetidos)].join(', ')}`)
+    if (publicasQueNo.length)
+      throw new Error(`el contrato las declara públicas: ${publicasQueNo.join(', ')}`)
+    return `${protegidas.size} rutas protegidas con esquema de seguridad`
+  },
+)
 
 comprobar('Toda tubería de un workflow declara pipefail', () => {
   // R-06: se verifica por código de salida, nunca por la última línea. Una
@@ -361,7 +377,8 @@ comprobar('Toda tubería de un workflow declara pipefail', () => {
     }
   }
 
-  if (!revisados) throw new Error('no se encontró ningún paso con tubería: la lectura dejó de ver algo')
+  if (!revisados)
+    throw new Error('no se encontró ningún paso con tubería: la lectura dejó de ver algo')
   if (sinPipefail.length) throw new Error(`sin pipefail: ${sinPipefail.join('; ')}`)
   return `${revisados} pasos con tubería, todos con pipefail`
 })
@@ -425,6 +442,51 @@ comprobar('Cada hallazgo abierto dice cómo se reproduce y qué lo vigila', () =
 // })
 // ---------------------------------------------------------------------------
 
+comprobar('Las pruebas no pueden escribir sobre la base de desarrollo', () => {
+  // ADR-0003. Se exige que la elección dependa del entorno, que en `test` no
+  // haya forma de caer sobre `DATABASE_URL`, que la conexión use esa elección
+  // y que el arranque de la suite de integración compruebe el entorno.
+  // Comprobar solo que la cadena aparece lo satisfacía un comentario, y por
+  // eso se lee el código sin ellos.
+  const cliente = leerCodigo('packages/db/src/client.ts')
+  const eleccion = cliente.match(/const url = env\.NODE_ENV === 'test' \? env\.(\w+) : env\.(\w+)/)
+  if (!eleccion) throw new Error('packages/db/src/client.ts no elige la base según NODE_ENV')
+  const [, enTest, fuera] = eleccion
+  if (enTest === fuera) throw new Error('la base de pruebas y la de desarrollo son la misma')
+  if (enTest !== 'DATABASE_URL_TEST') throw new Error(`en test se usa \`${enTest}\``)
+  if (!/postgres\(databaseUrlForEnv\(\)/.test(cliente)) {
+    throw new Error('la conexión no usa `databaseUrlForEnv()`')
+  }
+  const arranque = leerCodigo('vitest.global.integration.ts')
+  if (!/process\.env\.NODE_ENV !== 'test'/.test(arranque)) {
+    throw new Error('vitest.global.integration.ts no comprueba que NODE_ENV sea test')
+  }
+  return `${enTest} en test, ${fuera} fuera`
+})
+
+comprobar('El volcado de depuración va apagado salvo que se encienda', () => {
+  // ADR-0004. La rama sin depuración tiene que ser **exactamente** el cuerpo
+  // cerrado, y la variable un booleano con tipo: como cadena, `'false'` es
+  // truthy y el volcado quedaría encendido con el `.env.example` diciendo
+  // `false`.
+  const http = leerCodigo('apps/web/src/lib/http.ts')
+  if (!/const debug = readEnv\(\)\.DEBUG_HTTP_ERRORS/.test(http)) {
+    throw new Error('http.ts no decide el volcado con `readEnv().DEBUG_HTTP_ERRORS`')
+  }
+  if (!/const body = debug\s*\?[\s\S]*?:\s*INTERNAL_ERROR_BODY/.test(http)) {
+    throw new Error('sin DEBUG_HTTP_ERRORS el cuerpo del 500 no es INTERNAL_ERROR_BODY')
+  }
+  const env = leerCodigo('packages/shared/src/env.ts')
+  if (!/DEBUG_HTTP_ERRORS: bool,/.test(env) || !/\.default\('false'\)/.test(env)) {
+    throw new Error('DEBUG_HTTP_ERRORS no es un booleano con tipo apagado por defecto')
+  }
+  const ejemplo = leer('.env.example')
+  if (!/^DEBUG_HTTP_ERRORS=false$/m.test(ejemplo)) {
+    throw new Error('.env.example no deja DEBUG_HTTP_ERRORS=false')
+  }
+  return 'apagado'
+})
+
 // ---------------------------------------------------------------------------
 // Salida
 // ---------------------------------------------------------------------------
@@ -449,9 +511,11 @@ if (process.env.GITHUB_STEP_SUMMARY) {
       '',
       '| | Comprobación | Detalle |',
       '|---|---|---|',
-      ...filas.map((c) => `| ${c.ok ? 'OK' : '**FALLA**'} | ${celda(c.nombre)} | ${celda(c.detalle)} |`),
+      ...filas.map(
+        (c) => `| ${c.ok ? 'OK' : '**FALLA**'} | ${celda(c.nombre)} | ${celda(c.detalle)} |`,
+      ),
       '',
-    ].join('\n')
+    ].join('\n'),
   )
 }
 

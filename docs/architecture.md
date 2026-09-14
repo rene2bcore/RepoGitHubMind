@@ -50,7 +50,7 @@ C4Container
     System_Ext(ia, "Proveedor de IA", "")
 
     System_Boundary(rgm, "RepoGitHubMind") {
-        Container(web, "Web", "Next.js App Router en apps/web, puerto 3000", "Pantallas mobile first, Auth.js con credenciales, Route Handlers bajo /api/v1 y Server Actions. Toda respuesta envuelta en data o errors")
+        Container(web, "Web", "Next.js App Router en apps/web, puerto 3000", "Pantallas mobile first, sesion propia con cookie HttpOnly (ADR-0013), Route Handlers bajo /api/v1 y Server Actions. Toda respuesta envuelta en data o errors")
         Container(worker, "Worker", "Proceso Node en apps/worker", "Consume la cola background_jobs: fetch de GitHub, analisis de IA, embeddings. Idempotente con backoff")
         ContainerDb(db, "PostgreSQL 16 + pgvector", "Docker, una base por entorno", "Usuarios y sesiones, repositorios globales, relaciones privadas por usuario, analisis, embeddings, taxonomia, cola de trabajos y uso de IA")
     }
@@ -82,7 +82,7 @@ C4Component
         Component(pages, "Pantallas", "app/ con App Router", "login register library repositories/[id] search import. Mobile first con bottom navigation y sidebar en escritorio")
         Component(api, "Cliente de la API", "src/lib/api.ts", "Unico punto de contacto del cliente con /api/v1. Desenvuelve data y traduce errors")
         Component(routes, "Route Handlers", "app/api/v1/**/route.ts", "Validan con Zod antes de resolver ids. Devuelven data o errors. Generan el contrato OpenAPI")
-        Component(auth, "Auth", "Auth.js con adaptador Drizzle", "Credenciales email y contrasena. getSessionUser es la unica fuente de identidad")
+        Component(auth, "Auth", "src/lib/session.ts sobre la tabla sessions (ADR-0013)", "Credenciales email y contrasena con bcrypt. getSessionUser es la unica fuente de identidad")
         Component(services, "Servicios de aplicacion", "src/modules/*", "repository library import search recommendation. La logica de negocio vive aqui, no en React")
         Component(errors, "Manejador de errores", "src/lib/errors.ts", "Forma unica de error. Un 5xx nunca revela traza ni SQL")
         Component(shared, "packages/shared", "Tipos errores tipados esquemas Zod", "Compartido con el worker")
@@ -180,12 +180,12 @@ Lo que se comprueba y cómo, en [`SECURITY.md`](../SECURITY.md). Las tres decisi
 
 ## Decisiones que explican esta forma
 
-| Decisión | ADR |
-|---|---|
-| Monolito modular con worker aparte | [0006](adr/0006-monolito-modular.md) |
-| PostgreSQL + pgvector para todo | [0007](adr/0007-postgresql-y-pgvector.md) |
-| `Repository` global y `UserRepository` privada | [0008](adr/0008-repository-global-y-userrepository-privada.md) |
-| Proveedor de IA reemplazable y análisis cacheado | [0009](adr/0009-proveedor-de-ia-reemplazable.md) |
-| Cola de trabajos en PostgreSQL | [0010](adr/0010-cola-de-trabajos-en-postgresql.md) |
-| Contrato generado desde Zod y vigilado | [0001](adr/0001-el-contrato-se-genera-se-versiona-y-se-vigila-la-deriva.md) |
-| Dos repositorios y `git subtree` | [0012](adr/0012-dos-repositorios-y-subtree.md) |
+| Decisión                                         | ADR                                                                         |
+| ------------------------------------------------ | --------------------------------------------------------------------------- |
+| Monolito modular con worker aparte               | [0006](adr/0006-monolito-modular.md)                                        |
+| PostgreSQL + pgvector para todo                  | [0007](adr/0007-postgresql-y-pgvector.md)                                   |
+| `Repository` global y `UserRepository` privada   | [0008](adr/0008-repository-global-y-userrepository-privada.md)              |
+| Proveedor de IA reemplazable y análisis cacheado | [0009](adr/0009-proveedor-de-ia-reemplazable.md)                            |
+| Cola de trabajos en PostgreSQL                   | [0010](adr/0010-cola-de-trabajos-en-postgresql.md)                          |
+| Contrato generado desde Zod y vigilado           | [0001](adr/0001-el-contrato-se-genera-se-versiona-y-se-vigila-la-deriva.md) |
+| Dos repositorios y `git subtree`                 | [0012](adr/0012-dos-repositorios-y-subtree.md)                              |

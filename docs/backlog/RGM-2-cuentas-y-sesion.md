@@ -59,14 +59,14 @@ DADO la misma dirección
 CUANDO supera el límite de intentos de acceso en la ventana
 ENTONCES recibe `429` y no se evalúan más intentos hasta que pase.
 
-*Motivo: el PRD pide rate limiting como no funcional (§7) sin decir dónde; el registro y el acceso expuestos a Internet por el túnel son el primer sitio.*
+_Motivo: el PRD pide rate limiting como no funcional (§7) sin decir dónde; el registro y el acceso expuestos a Internet por el túnel son el primer sitio._
 
 **CA-9 · El servidor no está disponible al arrancar** · **[PROPUESTO]**
 DADO que tengo sesión guardada
 CUANDO la aplicación arranca y el servidor no responde
 ENTONCES se avisa, se conserva la sesión, y al recuperar el servidor sigo dentro.
 
-*Motivo: en el proyecto de origen del harness un fallo de red al arrancar borraba el token guardado (H-38 allí). Se escribe para no repetirlo.*
+_Motivo: en el proyecto de origen del harness un fallo de red al arrancar borraba el token guardado (H-38 allí). Se escribe para no repetirlo._
 
 ## Fuera de alcance
 
@@ -85,38 +85,41 @@ Cada ticket hereda los criterios de arriba; su Definition of Done es cómo entre
 **Qué se hace.** `packages/db` con el esquema Drizzle de `users`, `accounts`, `sessions`, `verification_tokens`: `email` único ignorando mayúsculas (índice sobre `lower(email)`), `password_hash`, `role`, fechas. Primera migración con `drizzle-kit` y `pnpm db:migrate`; la extensión `vector` habilitada en la misma migración. `docker/docker-compose.yml` con `postgres` (pgvector) y las dos bases. `.env.example` y `.env.test`. Seed con el usuario de desarrollo y contraseña de ejemplo.
 
 **Definition of Done**
-- [ ] Migración aplicada desde cero en un contenedor limpio; `pnpm db:migrate` idempotente
-- [ ] Prueba que pregunta a la conexión viva por `current_database()` y asserta `repogithubmind_test`
-- [ ] Comprobación en `verificar-docs.mjs` de que el cliente elige la base por entorno, con su entrada `ADR-0003` en `mutaciones.mjs` vista morder
-- [ ] `docs/data-model.md` con las columnas reales; fila en `docs/traceability.md`
-- [ ] Dependencias `drizzle-orm`, `drizzle-kit`, `postgres` comprobadas en npm y declaradas en el PR
+
+- [x] Migración aplicada desde cero en un contenedor limpio; `pnpm db:migrate` idempotente (`packages/db/migrations/0000_medical_patch.sql`, aplicada a las dos bases el 2026-09-14)
+- [x] Prueba que pregunta a la conexión viva por `current_database()` y asserta `repogithubmind_test` (`packages/db/tests/aislamiento.test.ts`)
+- [x] Comprobación en `verificar-docs.mjs` de que el cliente elige la base por entorno, con su entrada `ADR-0003` en `mutaciones.mjs` vista morder
+- [x] `docs/data-model.md` con las columnas reales; fila en `docs/traceability.md`
+- [x] Dependencias `drizzle-orm`, `drizzle-kit`, `postgres`, `bcryptjs`, `dotenv`, `tsx` comprobadas en npm y declaradas en el PR
 
 ### RGM-10 · H1.2 · Backend: registro con Zod, Auth.js con credenciales, sesión desde el servidor y forma única de error
 
 **Capa:** backend · **Talla:** L · [en Jira](https://ai4devs.atlassian.net/browse/RGM-10)
 
-**Qué se hace.** `POST /api/v1/auth/register` con Zod, email en minúsculas, hash con `bcrypt` o `argon2`, `201 { data }` y sesión abierta. Auth.js con credenciales y adaptador Drizzle. `getSessionUser()` en `packages/shared` como única fuente de identidad. Manejador de errores único ([ADR-0004](../adr/0004-el-volcado-de-depuracion-va-apagado.md)). Contrato desde Zod con `zod-to-openapi` ([ADR-0001](../adr/0001-el-contrato-se-genera-se-versiona-y-se-vigila-la-deriva.md)). Rate limiting en registro y acceso.
+**Qué se hace.** `POST /api/v1/auth/register` con Zod, email en minúsculas, hash con `bcryptjs`, `201 { data }` y sesión abierta. Sesión propia con token opaco en `sessions` y cookie `rgm_session` en vez de Auth.js mientras solo haya credenciales ([ADR-0013](../adr/0013-sesion-propia-en-vez-de-authjs.md)). `getSessionUser(req)` en `apps/web/src/lib/session.ts` como única fuente de identidad. Manejador de errores único ([ADR-0004](../adr/0004-el-volcado-de-depuracion-va-apagado.md)). Contrato desde Zod con `zod-to-openapi` ([ADR-0001](../adr/0001-el-contrato-se-genera-se-versiona-y-se-vigila-la-deriva.md)). Rate limiting en registro y acceso.
 
 **Definition of Done**
-- [ ] Una prueba de integración por escenario de `specs/auth`, citando el requisito en la cabecera
-- [ ] Prueba que provoca un `500` real y comprueba que el cuerpo no contiene el mensaje ni SQL
-- [ ] `pnpm openapi:check` en verde con el contrato regenerado; tabla de rutas de `CLAUDE.md` al día
-- [ ] Número de pruebas actualizado en `CLAUDE.md`, total y desglose
-- [ ] Prueba del `429` por intentos
-- [ ] Dependencias comprobadas en npm y declaradas en el PR
+
+- [x] Una prueba de integración por escenario de `specs/auth`, citando el requisito en la cabecera (`apps/web/tests/auth.test.ts`, 12 casos)
+- [x] Prueba que provoca un `500` real y comprueba que el cuerpo no contiene el mensaje ni SQL (`apps/web/tests/errores.test.ts`; mutación `ADR-0004`)
+- [x] `pnpm openapi:check` en verde con el contrato regenerado; tabla de rutas de `CLAUDE.md` al día
+- [x] Número de pruebas actualizado en `CLAUDE.md`, total y desglose
+- [x] Prueba del `429` por intentos
+- [x] Dependencias comprobadas en npm y declaradas en el PR (`zod`, `@asteasolutions/zod-to-openapi`, `bcryptjs`)
 
 ### RGM-11 · H1.3 · Frontend: pantallas de registro y acceso, guards de rutas y flujo E2E
 
 **Capa:** frontend · **Talla:** M · [en Jira](https://ai4devs.atlassian.net/browse/RGM-11)
 
-**Qué se hace.** `/register` y `/login` con shadcn/ui y los esquemas Zod de `packages/shared`, errores por campo en castellano, estado de envío, mobile first, dark/light/system. Guards de rutas privadas y públicas. `apps/web/src/lib/api.ts` como único punto de contacto. Playwright en `apps/web/e2e/` con `flujo.e2e.ts`: registro, biblioteca vacía, salir, entrar.
+**Qué se hace.** `/register` y `/login` con componentes de `components/ui/` (a mano hasta [H-04](../hallazgos.md)) y los esquemas Zod de `packages/shared`, errores por campo en castellano, estado de envío, mobile first, dark/light/system. Guards de rutas privadas y públicas. `apps/web/src/lib/api.ts` como único punto de contacto. Playwright en `apps/web/e2e/` con `flujo.e2e.ts`: registro, biblioteca vacía, salir, entrar.
 
 **Definition of Done**
-- [ ] Vitest sobre `lib/api.ts`: desenvolver, traducir errores, aviso de `401`
-- [ ] `flujo.e2e.ts` en verde en CI y en el catálogo: con el guard quitado, en rojo
-- [ ] Sin `any`; lint, typecheck y format en verde
-- [ ] Capturas de las dos pantallas en `docs/evidencia/` para la sección 1.3 del readme de LIDR
-- [ ] `components/ui/` traídos con `shadcn add`, no editados a mano
+
+- [x] Vitest sobre `lib/api.ts`: desenvolver, traducir errores, aviso de `401` (`apps/web/src/lib/api.test.ts`, 5 casos)
+- [x] `flujo.e2e.ts` en verde en local a escritorio y a 375 px. En el catálogo entra con H3 como `flujo-principal`, cuando el job de mutaciones tenga PostgreSQL y Chromium
+- [x] Sin `any`; lint, typecheck y format en verde
+- [x] Capturas de las dos pantallas en `docs/evidencia/` para la sección 1.3 del readme de LIDR
+- [ ] `components/ui/` traídos con `shadcn add`, no editados a mano · deuda [H-04](../hallazgos.md), cierra con RGM-4
 
 ### Orden de implementación
 

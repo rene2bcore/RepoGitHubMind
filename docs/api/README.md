@@ -2,7 +2,7 @@
 
 `openapi.json` es el contrato de los Route Handlers bajo `/api/v1`: rutas, parámetros, tipos, respuestas y errores.
 
-**Se genera desde los esquemas Zod y se versiona aquí** ([ADR-0001](../adr/0001-el-contrato-se-genera-se-versiona-y-se-vigila-la-deriva.md)). Hasta la Entrega 2 no hay código que lo genere, así que el fichero actual es el **contrato objetivo escrito a mano** ([H-01](../hallazgos.md)): la primera historia que implemente una ruta lo regenera y, desde ese momento, no se edita a mano.
+**Se genera desde los esquemas Zod y se versiona aquí** ([ADR-0001](../adr/0001-el-contrato-se-genera-se-versiona-y-se-vigila-la-deriva.md)). Desde H1 lo genera `apps/web/scripts/openapi.ts` a partir del registro de `apps/web/src/openapi/document.ts`, y no se edita a mano. Hoy contiene las cuatro rutas de `auth`; las de repositorios, biblioteca y búsqueda entran con H2, H3 y H5 en el mismo commit que su código.
 
 ```bash
 pnpm openapi:generate   # escribe docs/api/openapi.json desde los esquemas Zod registrados
@@ -13,14 +13,14 @@ CI ejecuta la comparación en cada push. Un rojo ahí significa que alguien camb
 
 ## Qué no está en el contrato, a propósito
 
-- Las rutas de Auth.js (`/api/auth/*`): las gestiona la librería.
 - Las Server Actions: no son HTTP público. Se documentan en `docs/capabilities/`.
+- Las páginas: `/login`, `/register`, `/library`, `/search` son HTML, no API.
 
 ## Lo que un generador no puede afirmar
 
 Y por eso `scripts/verificar-docs.mjs` sí lo contrasta:
 
-- Que toda ruta protegida lleve esquema de seguridad. `security: []` en OpenAPI no es «no se ha dicho nada»: es «esta ruta es pública». Solo `POST /api/v1/auth/register` lo es.
+- Que toda ruta protegida lleve esquema de seguridad. `security: []` en OpenAPI no es «no se ha dicho nada»: es «esta ruta es pública». Solo `POST /api/v1/auth/register` y `POST /api/v1/auth/login` lo son.
 - Que ninguna operación repita un parámetro (`name` + `in` únicos).
 - Que la tabla de rutas de `CLAUDE.md` coincida con el contrato.
 
@@ -39,7 +39,7 @@ Ejemplo:
 ```http
 POST /api/v1/repositories
 Content-Type: application/json
-Cookie: authjs.session-token=...
+Cookie: rgm_session=...
 
 { "url": "https://github.com/pgvector/pgvector", "source": "whatsapp" }
 ```

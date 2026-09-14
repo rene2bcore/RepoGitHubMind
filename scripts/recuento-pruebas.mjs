@@ -49,7 +49,8 @@ if (!resumenes.length) fallar('la salida del runner no trae la línea de resumen
 const ejecutadas = Number(resumenes.at(-1)[1])
 
 // Los números de un desglose, sin los identificadores de hallazgo ni de ADR.
-const partes = (texto) => (texto.replace(/(H|ADR|RGM)-\d+/g, '').match(/\b\d+\b/g) ?? []).map(Number)
+const partes = (texto) =>
+  (texto.replace(/(H|ADR|RGM)-\d+/g, '').match(/\b\d+\b/g) ?? []).map(Number)
 
 // La frase de CLAUDE.md: «Hoy hay **N pruebas** en el monorepo: <desglose>.»
 // El total tiene que cuadrar con el desglose, o una prueba añadida sin tocar
@@ -60,7 +61,9 @@ const citadas = Number(total[1])
 const sumandos = partes(total[2])
 const suma = sumandos.reduce((a, b) => a + b, 0)
 if (suma !== citadas) {
-  fallar(`CLAUDE.md dice ${citadas} pruebas pero su desglose suma ${suma} (${sumandos.join(' + ')})`)
+  fallar(
+    `CLAUDE.md dice ${citadas} pruebas pero su desglose suma ${suma} (${sumandos.join(' + ')})`,
+  )
 }
 
 if (citadas !== ejecutadas) {

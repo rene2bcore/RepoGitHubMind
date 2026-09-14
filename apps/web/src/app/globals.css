@@ -1,0 +1,33 @@
+@import 'tailwindcss';
+
+/* Tokens mínimos. Dark, light y system con la clase que pone el layout y
+   `prefers-color-scheme` por defecto (prompt maestro §66). */
+@theme {
+  --color-bg: #fafafa;
+  --color-fg: #111827;
+  --color-muted: #6b7280;
+  --color-card: #ffffff;
+  --color-border: #e5e7eb;
+  --color-accent: #2563eb;
+  --color-accent-fg: #ffffff;
+  --color-danger: #dc2626;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #0b0f17;
+    --color-fg: #e5e7eb;
+    --color-muted: #9ca3af;
+    --color-card: #111827;
+    --color-border: #1f2937;
+    --color-accent: #3b82f6;
+    --color-accent-fg: #ffffff;
+    --color-danger: #f87171;
+  }
+}
+
+html,
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+}

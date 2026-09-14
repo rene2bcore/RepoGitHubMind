@@ -4,12 +4,12 @@ Taxonomía **controlada y jerárquica** ([prompt maestro](prompts/00-prompt-maes
 
 Tres capas que no se mezclan:
 
-| Capa | Quién la escribe | Dónde vive | Para qué |
-|---|---|---|---|
-| **Categorías** | El catálogo de abajo, como seed. Un ADMIN podrá editarlo (roadmap) | `categories`, `repository_categories` | Navegar y filtrar. Jerárquicas |
-| **Tags de IA** | El análisis, libremente | `tags` con `kind = AI` | Matices que el catálogo no tiene |
-| **Topics de GitHub** | GitHub | `tags` con `kind = GITHUB_TOPIC` | Lo que el repositorio dice de sí mismo |
-| **Tags de usuario** | Cada cuenta, privados | roadmap | Organización personal |
+| Capa                 | Quién la escribe                                                   | Dónde vive                            | Para qué                               |
+| -------------------- | ------------------------------------------------------------------ | ------------------------------------- | -------------------------------------- |
+| **Categorías**       | El catálogo de abajo, como seed. Un ADMIN podrá editarlo (roadmap) | `categories`, `repository_categories` | Navegar y filtrar. Jerárquicas         |
+| **Tags de IA**       | El análisis, libremente                                            | `tags` con `kind = AI`                | Matices que el catálogo no tiene       |
+| **Topics de GitHub** | GitHub                                                             | `tags` con `kind = GITHUB_TOPIC`      | Lo que el repositorio dice de sí mismo |
+| **Tags de usuario**  | Cada cuenta, privados                                              | roadmap                               | Organización personal                  |
 
 ## Cómo mapea la IA
 
@@ -106,17 +106,17 @@ utilities                        Utilities
 
 ## Sinónimos para el mapeo
 
-| Sugerencia habitual de la IA | Categoría |
-|---|---|
-| `vector search`, `vector database`, `similarity search` | `data/databases/vector` |
-| `agentic`, `autonomous agents` | `artificial-intelligence/agents/agent-frameworks` |
-| `memory`, `long-term memory` | `artificial-intelligence/agents/agent-memory` |
-| `retrieval`, `retrieval augmented generation` | `artificial-intelligence/llm/rag` |
-| `stt`, `asr`, `transcription` | `media/audio/speech-to-text` |
-| `tts` | `media/audio/text-to-speech` |
-| `ci`, `github actions`, `pipelines` | `developer-tools/devops/ci-cd` |
-| `docker`, `kubernetes` | `developer-tools/devops/containers` |
-| `homelab` | `self-hosted` |
+| Sugerencia habitual de la IA                            | Categoría                                         |
+| ------------------------------------------------------- | ------------------------------------------------- |
+| `vector search`, `vector database`, `similarity search` | `data/databases/vector`                           |
+| `agentic`, `autonomous agents`                          | `artificial-intelligence/agents/agent-frameworks` |
+| `memory`, `long-term memory`                            | `artificial-intelligence/agents/agent-memory`     |
+| `retrieval`, `retrieval augmented generation`           | `artificial-intelligence/llm/rag`                 |
+| `stt`, `asr`, `transcription`                           | `media/audio/speech-to-text`                      |
+| `tts`                                                   | `media/audio/text-to-speech`                      |
+| `ci`, `github actions`, `pipelines`                     | `developer-tools/devops/ci-cd`                    |
+| `docker`, `kubernetes`                                  | `developer-tools/devops/containers`               |
+| `homelab`                                               | `self-hosted`                                     |
 
 La lista crece cuando `AIUsage` acumule categorías no mapeadas. No antes.
 

@@ -61,7 +61,7 @@ try {
     const bien = aceptado === permitido
     if (!bien) fallos++
     console.log(
-      `${bien ? 'OK   ' : 'FALLA'} ${nombre ?? rama} · ${aceptado ? 'aceptado' : 'rechazado'}, se esperaba ${permitido ? 'aceptado' : 'rechazado'}`
+      `${bien ? 'OK   ' : 'FALLA'} ${nombre ?? rama} · ${aceptado ? 'aceptado' : 'rechazado'}, se esperaba ${permitido ? 'aceptado' : 'rechazado'}`,
     )
   }
 } finally {

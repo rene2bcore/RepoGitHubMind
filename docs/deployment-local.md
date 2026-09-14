@@ -53,7 +53,7 @@ cloudflared tunnel run repogithubmind
 
 Antes de exponerlo:
 
-- `AUTH_URL=https://demo.TU-DOMINIO` en `.env`, y reiniciar `web`: Auth.js la lee al arrancar.
+- `AUTH_URL=https://demo.TU-DOMINIO` en `.env`, y reiniciar `web`: la app la lee al arrancar y con `https://` marca la cookie de sesión como `Secure`.
 - `NODE_ENV=production` y `pnpm build` para servir la build, no el servidor de desarrollo.
 - `DEBUG_HTTP_ERRORS` sin definir o `false`. Encendido devuelve traza en el cuerpo de los errores ([ADR-0004](adr/0004-el-volcado-de-depuracion-va-apagado.md)).
 - Un usuario de demo distinto del de desarrollo, con contraseña que no esté en ningún fichero.

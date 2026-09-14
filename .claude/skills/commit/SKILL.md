@@ -2,6 +2,7 @@
 name: commit
 description: Genera un commit convencional a partir de los cambios staged. Usar al cerrar cada petición.
 ---
+
 # Commit convencional
 
 1. Comprueba la rama: `git branch --show-current`. Si es `main`, para y crea una rama de trabajo (`git switch -c feat/<slug>`); el hook la rechazaría igual.

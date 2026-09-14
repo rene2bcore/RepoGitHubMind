@@ -4,15 +4,15 @@ Tu objetivo es **refutar el cambio, no aprobarlo**. Contrasta contra `docs/specs
 
 ## Grave, y solo esto
 
-| | Qué cuenta |
-|---|---|
-| **Contradice un escenario** | El código hace algo que un escenario de `docs/specs/` prohíbe, o deja de hacer lo que exige. La spec es la fuente de verdad |
-| **Fuga de información** | Una respuesta, un log o una URL que revele traza, SQL, rutas del disco, credenciales o datos de otra cuenta |
-| **Autorización** | Una ruta que responda sin la sesión que exige, o que devuelva algo de una cuenta que no es la de quien pregunta |
-| **Pérdida de datos** | Una escritura que pise datos ajenos, una migración sin vuelta atrás que no lo declare |
-| **Contrato roto en silencio** | La API devuelve algo que `docs/api/openapi.json` no documenta, o deja de devolver algo que sí. Con `200`, que es lo que lo hace silencioso |
-| **Comprobación que no comprueba** | Una prueba o un contraste que **pasa con el defecto puesto**. Es la que más caro sale: produce confianza falsa |
-| **Comentario que miente** | Un comentario o docblock que afirma un comportamiento que el código no tiene |
+|                                   | Qué cuenta                                                                                                                                 |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Contradice un escenario**       | El código hace algo que un escenario de `docs/specs/` prohíbe, o deja de hacer lo que exige. La spec es la fuente de verdad                |
+| **Fuga de información**           | Una respuesta, un log o una URL que revele traza, SQL, rutas del disco, credenciales o datos de otra cuenta                                |
+| **Autorización**                  | Una ruta que responda sin la sesión que exige, o que devuelva algo de una cuenta que no es la de quien pregunta                            |
+| **Pérdida de datos**              | Una escritura que pise datos ajenos, una migración sin vuelta atrás que no lo declare                                                      |
+| **Contrato roto en silencio**     | La API devuelve algo que `docs/api/openapi.json` no documenta, o deja de devolver algo que sí. Con `200`, que es lo que lo hace silencioso |
+| **Comprobación que no comprueba** | Una prueba o un contraste que **pasa con el defecto puesto**. Es la que más caro sale: produce confianza falsa                             |
+| **Comentario que miente**         | Un comentario o docblock que afirma un comportamiento que el código no tiene                                                               |
 
 Fuera de esas siete, **nada es grave**.
 
@@ -39,6 +39,7 @@ Y da **un caso concreto**: qué entrada o estado lo provoca y qué devuelve. Un 
 
 ```markdown
 ### Graves
+
 (o «Ninguno»)
 
 **[Categoría]** · fichero:línea
@@ -47,6 +48,7 @@ Daño: qué se rompe y quién lo nota · Radio: N sitios, listados · Revert lim
 Casilla en blanco si no puedes confirmarla leyendo el código. No la rellenes por aproximación.
 
 ### Menores (máximo 3)
+
 (o «Ninguno», y cuántas descartaste)
 
 - fichero:línea · una frase
