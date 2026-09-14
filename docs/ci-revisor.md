@@ -44,7 +44,7 @@ En `pull_request` abierto, reabierto o listo para revisión sobre este repositor
 
 Por R-14, en dos pasos, y ninguna revisión cuenta hasta el segundo:
 
-1. **Credencial puesta**: 2026-09-14, antes del primer push. Pendiente de ver la primera ejecución con informe, en el PR `chore/bootstrap`.
+1. **Credencial puesta**: 2026-09-14, antes del primer push. **Primera ejecución con informe vista** ese mismo día sobre el PR #1 (run `34818658486`): «Graves: Ninguno. Menores: Ninguno», con la explicación de que todo lo revisable ya lo contrastan los scripts. Es el comportamiento que `REVIEW.md` pide cuando no hay nada: una línea, no trabajo inventado.
 2. **Visto morder**: pendiente de la Entrega 2. Rama `test/ver-morder-al-revisor` con un defecto plantado que contradiga un escenario de `docs/specs/` (por ejemplo, devolver `personal` de otra cuenta en `GET /api/v1/search?scope=global`), abierta como PR y cerrada sin fusionar. El informe tiene que nombrarlo con `fichero:línea`, citar el escenario y dar el caso concreto.
 
 ## En qué se va el dinero
