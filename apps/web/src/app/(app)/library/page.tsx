@@ -11,7 +11,8 @@ export const dynamic = 'force-dynamic'
  * la cuenta desde el servidor, con el orden y los filtros de la URL
  * validados por el mismo esquema que la API. Un valor fuera del dominio no
  * se ignora: se dice y se lista con los valores por defecto. Una categoría
- * que el catálogo no conoce, igual.
+ * que el catálogo no conoce también se dice, y se lista sin ella con el resto
+ * de filtros.
  */
 export default async function LibraryPage({
   searchParams,
@@ -37,8 +38,10 @@ export default async function LibraryPage({
     list = await listUserRepositories(user.id, query)
   } catch (error) {
     if (!(error instanceof ValidationError)) throw error
+    // Solo la categoría es lo que el servicio rechaza: el resto de filtros ya
+    // validó y se conserva.
     queryError = error.items.map((e) => `${e.field}: ${e.message}`).join('; ')
-    query = libraryQuerySchema.parse({})
+    query = { ...query, category: undefined }
     list = await listUserRepositories(user.id, query)
   }
   return (

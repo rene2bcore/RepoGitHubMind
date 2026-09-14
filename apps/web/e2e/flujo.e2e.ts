@@ -111,6 +111,10 @@ test('registrarse, guardar un repositorio por URL, anotarlo, salir y volver a en
   await expect(page.getByLabel('Categoría', { exact: true })).toHaveValue('databases')
   await expect(page.getByTestId('repository-card')).toHaveCount(1)
   await expect(page.getByTestId('repository-card').first()).toContainText('pgvector / pgvector')
+  // Una categoría que el catálogo no conoce se dice, y el resto de filtros se conserva.
+  await page.goto('/library?status=USING&category=quantum-finance')
+  await expect(page.getByRole('alert')).toContainText('category')
+  await expect(page.getByTestId('repository-card')).toHaveCount(1)
 
   // 6. Salir invalida la sesión: la biblioteca vuelve a pedir acceso.
   await page.getByRole('button', { name: 'Salir' }).first().click()
