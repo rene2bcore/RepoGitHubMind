@@ -1,7 +1,16 @@
 import { and, eq } from 'drizzle-orm'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { FakeAIProvider, setAIProvider } from '@rgm/ai'
-import { aiUsage, backgroundJobs, closeDb, getDb, repositories, repositoryAnalyses } from '@rgm/db'
+import {
+  aiUsage,
+  backgroundJobs,
+  claimJob,
+  closeDb,
+  enqueueJob,
+  getDb,
+  repositories,
+  repositoryAnalyses,
+} from '@rgm/db'
 import { FakeGitHubProvider, setGitHubProvider } from '@rgm/github'
 import { resetEnvCache, type UserRepository, type UserRepositoryDetail } from '@rgm/shared'
 import { POST as analyze } from '@/app/api/v1/repositories/[id]/analysis/route'
@@ -9,6 +18,7 @@ import { GET as detail } from '@/app/api/v1/repositories/[id]/route'
 import { GET as list, POST as save } from '@/app/api/v1/repositories/route'
 import { configureRateLimit, resetRateLimit } from '@/lib/rate-limit'
 import { listLibraryCategories } from '@/modules/repositories/service'
+import { analyzeRepositoryJob } from '../../worker/src/analyze'
 import { processNextJob } from '../../worker/src/jobs'
 import { cuentaConSesion, jsonRequest, limpiarBase } from './helpers'
 
@@ -166,6 +176,24 @@ describe('análisis de IA', () => {
     expect((await processNextJob())?.outcome).toBe('completed')
     expect(ai.requests).toHaveLength(3)
     expect(await usos()).toBe(4)
+  })
+
+  it('forzar mientras un trabajo ya está en curso no se pierde: ese trabajo rehace el análisis', async () => {
+    const ada = await cuentaConSesion('ada')
+    const { body } = await guardar(ada.cookie, 'https://github.com/pgvector/pgvector')
+    expect((await processNextJob())?.outcome).toBe('completed')
+    const repositoryId = body.data.repository.id
+
+    // Un trabajo sobre el análisis vigente, tomado por el worker y todavía sin decidir.
+    await enqueueJob('ANALYZE_REPOSITORY', repositoryId)
+    const enCurso = await claimJob()
+    expect(enCurso?.status).toBe('PROCESSING')
+
+    const forzado = await pedir(ada.cookie, body.data.id, { force: true })
+    expect(forzado.status).toBe(202)
+
+    expect(await analyzeRepositoryJob(enCurso!)).toBe('analyzed')
+    expect(ai.requests).toHaveLength(2)
   })
 
   it('pedir el análisis exige sesión, valida antes de resolver, y el id de otra cuenta es 404', async () => {

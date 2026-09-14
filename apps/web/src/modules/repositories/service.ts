@@ -1,7 +1,6 @@
 import { and, asc, desc, eq, gte, inArray, sql, type SQL } from 'drizzle-orm'
 import { abandonmentAssessment, analysisStaleReason } from '@rgm/ai'
 import {
-  backgroundJobs,
   categories,
   enqueueJob,
   getDb,
@@ -106,6 +105,12 @@ async function upsertRepository(db: Database, data: GitHubRepositoryData): Promi
  * anterior se conserva hasta que termine (specs/ai · «Repositorio que
  * cambió»).
  *
+ * Forzar caduca el análisis vigente antes de encolar. La cola admite un solo
+ * trabajo activo por repositorio, así que si ya hay uno en cola o en curso no
+ * se encola otro: ese trabajo vuelve a mirar la caché, la encuentra caducada
+ * y rehace el análisis. Sin caducarlo, un trabajo ya tomado por el worker
+ * respondería «vigente» y el forzado se perdería en silencio.
+ *
  * @returns si al terminar hay un análisis en camino.
  */
 async function requestAnalysis(
@@ -138,6 +143,7 @@ async function requestAnalysis(
     return false
   }
 
+  const now = new Date()
   await db
     .insert(repositoryAnalyses)
     .values({ repositoryId, status: 'PENDING' })
@@ -145,24 +151,11 @@ async function requestAnalysis(
       target: repositoryAnalyses.repositoryId,
       set: {
         status: sql`case when ${repositoryAnalyses.status} = 'COMPLETED' then 'COMPLETED' else 'PENDING' end`,
-        updatedAt: new Date(),
+        ...(force ? { expiresAt: now } : {}),
+        updatedAt: now,
       },
     })
-  const payload = force ? { force: true } : {}
-  const { enqueued } = await enqueueJob('ANALYZE_REPOSITORY', repositoryId, payload, db)
-  if (!enqueued && force) {
-    // Ya había uno en cola sin forzar: que se ejecute forzado.
-    await db
-      .update(backgroundJobs)
-      .set({ payload, updatedAt: new Date() })
-      .where(
-        and(
-          eq(backgroundJobs.type, 'ANALYZE_REPOSITORY'),
-          eq(backgroundJobs.repositoryId, repositoryId),
-          eq(backgroundJobs.status, 'QUEUED'),
-        ),
-      )
-  }
+  await enqueueJob('ANALYZE_REPOSITORY', repositoryId, force ? { force: true } : {}, db)
   return true
 }
 

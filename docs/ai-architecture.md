@@ -101,7 +101,7 @@ analysisStaleReason(análisis, repositorio, force)  (la misma función)
        expired | changed → ANALYZE_REPOSITORY
 ```
 
-Usuario A guarda LangGraph: se analiza. Usuario B lo guarda: se reutiliza al momento y `ai_usage` no gana filas. Se vuelve a analizar si el repositorio cambió (`github_pushed_at` posterior a `ai_analyzed_at`), si el análisis caducó (`expires_at`) o si alguien lo fuerza con `POST /api/v1/repositories/{id}/analysis` y `{ "force": true }` (§21). Un análisis completado sigue a la vista, `COMPLETED`, mientras llega el nuevo; si el nuevo falla, el anterior se queda. La regla se pregunta en los dos sitios a propósito: si la web encolara de más, el worker no pagaría, y al revés.
+Usuario A guarda LangGraph: se analiza. Usuario B lo guarda: se reutiliza al momento y `ai_usage` no gana filas. Se vuelve a analizar si el repositorio cambió (`github_pushed_at` posterior a `ai_analyzed_at`), si el análisis caducó (`expires_at`) o si alguien lo fuerza con `POST /api/v1/repositories/{id}/analysis` y `{ "force": true }` (§21). Forzar caduca el análisis vigente antes de encolar: si ya hay un trabajo en cola o en curso, la cola no admite otro, y ese trabajo vuelve a mirar la caché, la encuentra caducada y rehace el análisis. Un análisis completado sigue a la vista, `COMPLETED`, mientras llega el nuevo; si el nuevo falla, el anterior se queda. La regla se pregunta en los dos sitios a propósito: si la web encolara de más, el worker no pagaría, y al revés.
 
 ## Categorías
 
