@@ -1,5 +1,18 @@
 import { sql } from 'drizzle-orm'
-import { boolean, index, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import {
+  bigint,
+  boolean,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  real,
+  smallint,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core'
 
 /**
  * Esquema de H1 · cuentas y sesiones (docs/data-model.md).
@@ -63,3 +76,179 @@ export const verificationTokens = pgTable('verification_tokens', {
   expires: timestamp('expires', { withTimezone: true }).notNull(),
   used: boolean('used').notNull().default(false),
 })
+
+// ---------------------------------------------------------------------------
+// H2 · repositorios globales, relación privada por cuenta, análisis y cola
+// (docs/data-model.md, ADR-0008, ADR-0010)
+// ---------------------------------------------------------------------------
+
+export const PERSONAL_STATUS_VALUES = [
+  'NEW',
+  'TO_REVIEW',
+  'REVIEWED',
+  'TESTING',
+  'INSTALLED',
+  'USING',
+  'FAVORITE',
+  'REJECTED',
+  'ARCHIVED',
+] as const
+
+export const ANALYSIS_STATUS_VALUES = ['PENDING', 'COMPLETED', 'FAILED', 'DISABLED'] as const
+
+export const JOB_TYPE_VALUES = [
+  'IMPORT_REPOSITORY',
+  'ANALYZE_REPOSITORY',
+  'GENERATE_EMBEDDING',
+  'REFRESH_REPOSITORY',
+  'BULK_IMPORT',
+] as const
+
+export const JOB_STATUS_VALUES = ['QUEUED', 'PROCESSING', 'COMPLETED', 'FAILED'] as const
+
+const textArray = (name: string) =>
+  text(name)
+    .array()
+    .notNull()
+    .default(sql`'{}'::text[]`)
+
+/**
+ * `Repository` es global: una fila por repositorio de GitHub aunque lo
+ * guarden mil cuentas (ADR-0008). El identificador estable es el id de
+ * GitHub; `full_name` va en minúsculas porque GitHub no distingue mayúsculas.
+ */
+export const repositories = pgTable(
+  'repositories',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    githubRepositoryId: bigint('github_repository_id', { mode: 'number' }).notNull(),
+    fullName: text('full_name').notNull(),
+    owner: text('owner').notNull(),
+    name: text('name').notNull(),
+    url: text('url').notNull(),
+    description: text('description'),
+    homepage: text('homepage'),
+    primaryLanguage: text('primary_language'),
+    license: text('license'),
+    topics: textArray('topics'),
+    languages: jsonb('languages').$type<Record<string, number>>().notNull().default({}),
+    stars: integer('stars').notNull().default(0),
+    forks: integer('forks').notNull().default(0),
+    openIssues: integer('open_issues').notNull().default(0),
+    archived: boolean('archived').notNull().default(false),
+    fork: boolean('fork').notNull().default(false),
+    defaultBranch: text('default_branch'),
+    readme: text('readme'),
+    latestRelease: text('latest_release'),
+    githubCreatedAt: timestamp('github_created_at', { withTimezone: true }),
+    githubUpdatedAt: timestamp('github_updated_at', { withTimezone: true }),
+    githubPushedAt: timestamp('github_pushed_at', { withTimezone: true }),
+    latestReleaseAt: timestamp('latest_release_at', { withTimezone: true }),
+    metadataRefreshedAt: timestamp('metadata_refreshed_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('repositories_github_id_unique').on(t.githubRepositoryId),
+    uniqueIndex('repositories_full_name_unique').on(t.fullName),
+    index('repositories_pushed_at_idx').on(t.githubPushedAt),
+    index('repositories_stars_idx').on(t.stars),
+    index('repositories_language_idx').on(t.primaryLanguage),
+    index('repositories_license_idx').on(t.license),
+  ],
+)
+
+/** Un análisis vigente por repositorio, reutilizado por todas las cuentas (ADR-0009). */
+export const repositoryAnalyses = pgTable('repository_analyses', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  repositoryId: uuid('repository_id')
+    .notNull()
+    .unique()
+    .references(() => repositories.id, { onDelete: 'cascade' }),
+  status: text('status', { enum: ANALYSIS_STATUS_VALUES }).notNull().default('PENDING'),
+  summary: text('summary'),
+  purpose: text('purpose'),
+  mainUseCases: textArray('main_use_cases'),
+  installationSummary: text('installation_summary'),
+  deploymentType: textArray('deployment_type'),
+  frameworks: textArray('frameworks'),
+  maturity: text('maturity'),
+  advantages: textArray('advantages'),
+  limitations: textArray('limitations'),
+  targetUsers: textArray('target_users'),
+  activityAssessment: text('activity_assessment'),
+  abandonmentRisk: text('abandonment_risk', { enum: ['LOW', 'MEDIUM', 'HIGH', 'UNKNOWN'] }),
+  aiConfidence: real('ai_confidence'),
+  provider: text('provider'),
+  model: text('model'),
+  lastError: text('last_error'),
+  aiAnalyzedAt: timestamp('ai_analyzed_at', { withTimezone: true }),
+  expiresAt: timestamp('expires_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+/**
+ * `UserRepository` es privada: estado, favorito, rating y notas de una cuenta
+ * sobre un repositorio global. Nunca salen a otra cuenta (ADR-0008). Toda
+ * consulta filtra por el `user_id` de la sesión.
+ */
+export const userRepositories = pgTable(
+  'user_repositories',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    repositoryId: uuid('repository_id')
+      .notNull()
+      .references(() => repositories.id, { onDelete: 'cascade' }),
+    status: text('status', { enum: PERSONAL_STATUS_VALUES }).notNull().default('NEW'),
+    favorite: boolean('favorite').notNull().default(false),
+    rating: smallint('rating'),
+    notes: text('notes'),
+    source: text('source'),
+    sourceText: text('source_text'),
+    customTitle: text('custom_title'),
+    savedAt: timestamp('saved_at', { withTimezone: true }).notNull().defaultNow(),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('user_repositories_user_repo_unique').on(t.userId, t.repositoryId),
+    index('user_repositories_user_status_idx').on(t.userId, t.status),
+    index('user_repositories_user_favorite_idx').on(t.userId, t.favorite),
+    index('user_repositories_user_saved_idx').on(t.userId, t.savedAt),
+  ],
+)
+
+/**
+ * Cola de trabajos en PostgreSQL (ADR-0010): tabla propia, tomada con
+ * `FOR UPDATE SKIP LOCKED`. El índice único parcial hace idempotente el
+ * encolado: un mismo trabajo sobre un mismo repositorio no se repite
+ * mientras esté en cola o en curso.
+ */
+export const backgroundJobs = pgTable(
+  'background_jobs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    type: text('type', { enum: JOB_TYPE_VALUES }).notNull(),
+    repositoryId: uuid('repository_id').references(() => repositories.id, {
+      onDelete: 'cascade',
+    }),
+    status: text('status', { enum: JOB_STATUS_VALUES }).notNull().default('QUEUED'),
+    payload: jsonb('payload').$type<Record<string, unknown>>().notNull().default({}),
+    attempts: integer('attempts').notNull().default(0),
+    maxAttempts: integer('max_attempts').notNull().default(3),
+    lastError: text('last_error'),
+    runAfter: timestamp('run_after', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('background_jobs_status_run_after_idx').on(t.status, t.runAfter),
+    uniqueIndex('background_jobs_active_unique')
+      .on(t.type, t.repositoryId)
+      .where(sql`${t.status} in ('QUEUED', 'PROCESSING')`),
+  ],
+)
