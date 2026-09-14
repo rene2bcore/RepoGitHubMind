@@ -37,6 +37,7 @@ Thumbs.db
 
 # Configuración local de Claude Code: la de cada máquina, no la del proyecto
 .claude/settings.local.json
+.claude/worktrees/
 
 # Planes de sesión y notas propias: material de trabajo, no documentación
 # del producto. No viajan con el repositorio.

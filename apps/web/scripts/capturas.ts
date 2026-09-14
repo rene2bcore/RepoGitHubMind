@@ -8,9 +8,11 @@ import { chromium, devices } from '@playwright/test'
  * LIDR). Recorre el flujo real contra un servidor ya levantado con la base
  * de pruebas y GitHub falso, y guarda cada pantalla a móvil y a escritorio.
  *
- * Uso, desde apps/web, con el servidor en marcha:
- *   DATABASE_URL=<base de pruebas> GITHUB_FAKE=1 pnpm exec next dev -p 3002
- *   pnpm exec tsx scripts/capturas.ts http://localhost:3002
+ * Uso, contra la imagen de producción (sin la insignia del servidor de
+ * desarrollo), con la base de desarrollo migrada y GitHub falso:
+ *   docker run --rm -d -p 3006:3000 -e DATABASE_URL=postgres://rgm:rgm@host.docker.internal:5434/repogithubmind  *     -e AUTH_SECRET=<32 caracteres> -e AUTH_URL=http://localhost:3006 -e GITHUB_FAKE=1 \
+ *     -e AI_ANALYSIS_ENABLED=false repogithubmind-web
+ *   pnpm exec tsx scripts/capturas.ts http://localhost:3006
  */
 const base = process.argv[2] ?? 'http://localhost:3002'
 const out = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'docs', 'evidencia')
@@ -25,8 +27,19 @@ for (const [nombre, contexto] of [
   const ctx = await browser.newContext(contexto)
   const page = await ctx.newPage()
   const email = `capturas-${nombre}-${Date.now()}@example.com`
-  const foto = (fichero: string) =>
-    page.screenshot({ path: join(out, `${fichero}-${nombre}.png`), fullPage: true })
+  // Se espera a que React termine de hidratar: capturar antes hace que
+  // Playwright toque el DOM a mitad y el servidor de desarrollo lo marque
+  // como error. Las capturas se hacen contra la imagen de producción.
+  // En móvil se captura lo que cabe en la pantalla del teléfono: una captura
+  // de página completa pinta la navegación inferior fija a mitad de la
+  // imagen, encima de una tarjeta, y eso no lo ve nadie en un teléfono.
+  const foto = async (fichero: string) => {
+    await page.waitForLoadState('networkidle')
+    await page.screenshot({
+      path: join(out, `${fichero}-${nombre}.png`),
+      fullPage: nombre === 'escritorio',
+    })
+  }
 
   await page.goto(`${base}/register`)
   await foto('01-registro')
@@ -71,6 +84,9 @@ for (const [nombre, contexto] of [
   await guardado
   await foto('05-detalle')
 
+  // Con sesión, /login redirige a la biblioteca: se cierra la sesión por la
+  // API con las cookies del propio navegador y se abre la pantalla de acceso.
+  await page.request.post(`${base}/api/v1/auth/logout`)
   await page.goto(`${base}/login`)
   await foto('06-acceso')
   await ctx.close()
