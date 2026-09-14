@@ -45,6 +45,10 @@ docs/plans/
 # Herramienta local de configuracion: no es parte del producto
 core-harness/
 
+# Variables de producción del compose (docker/.env.example sí se versiona)
+docker/.env
+docker/backups/
+
 # Next.js y artefactos de pruebas
 .next/
 next-env.d.ts

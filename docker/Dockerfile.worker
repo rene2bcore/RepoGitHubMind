@@ -1,0 +1,31 @@
+# RepoGitHubMind · worker y migraciones para producción.
+#
+# Una sola imagen para dos procesos: el worker (comando por defecto) y las
+# migraciones (el servicio `migrate` de docker-compose.prod.yml). Los paquetes
+# del workspace se consumen como TypeScript y los ejecuta `tsx`, igual que en
+# desarrollo, así que no hay un paso de compilación que pueda divergir.
+#
+#   docker build -f docker/Dockerfile.worker -t repogithubmind-worker .
+
+FROM node:24-slim
+ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH
+RUN corepack enable
+WORKDIR /app
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY apps/web/package.json apps/web/
+COPY apps/worker/package.json apps/worker/
+COPY packages/config/package.json packages/config/
+COPY packages/db/package.json packages/db/
+COPY packages/github/package.json packages/github/
+COPY packages/shared/package.json packages/shared/
+# `tsx` es devDependency y hace falta en tiempo de ejecución: se instalan
+# también las de desarrollo, explícitamente, y NODE_ENV=production se fija
+# después para que no dependa de cómo interprete pnpm esa variable.
+RUN pnpm install --frozen-lockfile --ignore-scripts --prod=false --filter worker... --filter @rgm/db... \
+  && test -e apps/worker/node_modules/tsx && test -e packages/db/node_modules/tsx
+ENV NODE_ENV=production
+COPY --chown=node:node packages ./packages
+COPY --chown=node:node apps/worker ./apps/worker
+USER node
+WORKDIR /app/apps/worker
+CMD ["node", "--import", "tsx", "src/index.ts"]

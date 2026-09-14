@@ -93,6 +93,17 @@ Hasta que exista `package.json`, los jobs `verificar` y `navegador` se omiten y 
 
 Para repetir una sola: `node scripts/mutaciones.mjs <id>`. Para ver el catálogo: `--listar`. El script restaura los ficheros al terminar, también con `Ctrl-C`.
 
+### Imágenes de producción y stack arriba
+
+Construye `docker/Dockerfile.web` y `docker/Dockerfile.worker`, levanta `docker/docker-compose.prod.yml` con un `docker/.env` generado al vuelo y exige `/api/health`, `/api/health/ready` y un registro `201`. Si falla, el paso «Registros si algo falla» vuelca los logs de todos los servicios.
+
+| Síntoma                                  | Qué pasó                                                                   | Qué hacer                                                                                                                              |
+| ---------------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| El build de `web` falla en `next build`  | Lo mismo que fallaría `pnpm --filter web build` en local                   | Reproducir en local con ese comando                                                                                                    |
+| `migrate` sale distinto de cero          | Una migración no aplica sobre una base vacía                               | `docker compose -f docker/docker-compose.prod.yml logs migrate`; reproducir con `pnpm db:migrate:test` sobre la base de pruebas limpia |
+| `--wait` agota el tiempo                 | Un healthcheck no pasa: la web no arranca o una variable obligatoria falta | Los logs de `web`: `Variables de entorno inválidas` dice cuál                                                                          |
+| Un paquete del workspace no se encuentra | Se añadió un paquete y los Dockerfiles copian los `package.json` uno a uno | Añadir su `COPY packages/<nombre>/package.json` en los dos Dockerfiles                                                                 |
+
 ### La documentación corresponde con el código
 
 | Paso                                   | Mensaje                                         | Qué hacer                                                                                                                                                                       |
@@ -177,10 +188,10 @@ Después se rellenan `readme.md` y `prompts.md` de LIDR desde `producto/docs/` y
 
 ## 7 · Despliegue
 
-**No ejecutado nunca.** Local y demo por Cloudflare Tunnel en [`deployment-local.md`](deployment-local.md); VPS en [`deployment-hostinger.md`](deployment-hostinger.md). Quien lo ejecute por primera vez lo convierte en procedimiento y lo fecha allí.
+Preparado en el código y probado en CI y en local; **no ejecutado todavía en el VPS** (RGM-14). Procedimiento, vuelta atrás y checklist en [`deployment-hostinger.md`](deployment-hostinger.md). Local y demo por túnel desde la máquina de desarrollo en [`deployment-local.md`](deployment-local.md).
 
 ---
 
 ## 8 · Monitoreo y guardia
 
-**No hay.** No hay producción que vigilar, ni alertas, ni rotación de guardia. Lo que hace las veces de monitoreo hoy es CI en cada push, y quien la mira es quien empuja. Si el proyecto se desplegara, lo mínimo (maestro §50): `GET /api/health` sin tocar la base; logs estructurados con id de petición; logs de trabajos del worker; `ai_usage` y errores de GitHub; una persona responsable y este documento como punto de partida.
+**No hay.** No hay producción que vigilar, ni alertas, ni rotación de guardia. Lo que hace las veces de monitoreo hoy es CI en cada push, y quien la mira es quien empuja. Lo que ya existe para cuando se despliegue: `GET /api/health` sin tocar la base y `GET /api/health/ready` con ella; lo que falta (maestro §50): logs estructurados con id de petición; logs de trabajos del worker; `ai_usage` y errores de GitHub; una persona responsable y este documento como punto de partida.

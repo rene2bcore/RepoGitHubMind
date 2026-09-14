@@ -43,6 +43,15 @@ describe('registerSchema', () => {
   })
 })
 
+describe('mensajes por defecto', () => {
+  it('salen en castellano cuando el esquema no trae mensaje propio', () => {
+    const r = personalUpdateSchema.safeParse({ rating: 9 })
+    expect(r.success).toBe(false)
+    if (r.success) return
+    expect(zodToErrors(r.error)[0]?.message).toMatch(/se esperaba/)
+  })
+})
+
 describe('personalUpdateSchema', () => {
   it('rechaza un cuerpo vacío', () => {
     expect(personalUpdateSchema.safeParse({}).success).toBe(false)

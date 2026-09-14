@@ -13,6 +13,10 @@ import { getDb, closeDb, users } from './index'
 export const DEV_USER = { email: 'dev@repogithubmind.local', password: 'desarrollo123' } as const
 
 export async function seed(): Promise<void> {
+  // En producción no hay usuario de desarrollo: su contraseña está en este
+  // fichero. Hoy el seed no siembra nada más; la taxonomía llega con H4 y se
+  // sembrará en todos los entornos, antes de esta línea.
+  if (process.env.NODE_ENV === 'production') return
   const db = getDb()
   const existing = await db
     .select({ id: users.id })
@@ -32,7 +36,9 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   seed()
     .then(async () => {
       console.log(
-        `seed: usuario de desarrollo ${DEV_USER.email} (contraseña de ejemplo: ${DEV_USER.password})`,
+        process.env.NODE_ENV === 'production'
+          ? 'seed: producción, sin usuario de desarrollo'
+          : `seed: usuario de desarrollo ${DEV_USER.email} (contraseña de ejemplo: ${DEV_USER.password})`,
       )
       await closeDb()
       process.exit(0)
