@@ -132,6 +132,42 @@ jobs:
           path: apps/web/test-results/
           retention-days: 7
 
+  imagenes:
+    name: Imágenes de producción y stack arriba
+    needs: codigo
+    if: needs.codigo.outputs.existe == 'si'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      # Lo mismo que se ejecuta en el VPS (docs/deployment-hostinger.md): si
+      # una imagen no construye o el stack no llega a sano, no se despliega.
+      - name: Construir y levantar docker-compose.prod.yml
+        run: |
+          set -o pipefail
+          {
+            echo "POSTGRES_PASSWORD=$(openssl rand -hex 16)"
+            echo "AUTH_SECRET=$(openssl rand -base64 32)"
+            echo "AUTH_URL=http://localhost:3000"
+            echo "TRUST_PROXY=false"
+          } > docker/.env
+          docker compose -f docker/docker-compose.prod.yml --env-file docker/.env up -d --build --wait --wait-timeout 180 postgres web worker
+      - name: La web está sana y llega a la base
+        run: |
+          set -o pipefail
+          curl -fsS http://localhost:3000/api/health
+          curl -fsS http://localhost:3000/api/health/ready
+          code=$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' \
+            -d '{"email":"ci@example.com","password":"secreto123","passwordConfirmation":"secreto123"}' \
+            http://localhost:3000/api/v1/auth/register)
+          test "$code" = "201"
+      - name: Registros si algo falla
+        if: failure()
+        run: docker compose -f docker/docker-compose.prod.yml --env-file docker/.env logs --no-color
+      - name: Apagar
+        if: always()
+        run: docker compose -f docker/docker-compose.prod.yml --env-file docker/.env down -v
+
   documentacion:
     name: La documentación corresponde con el código
     runs-on: ubuntu-latest

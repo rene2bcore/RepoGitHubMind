@@ -1,0 +1,96 @@
+# RepoGitHubMind · producción (VPS).
+#
+#   docker compose -f docker/docker-compose.prod.yml --env-file docker/.env up -d --build
+#
+# Distinto del compose de desarrollo a propósito: aquí PostgreSQL no publica
+# ningún puerto, no se crea la base de pruebas, la contraseña sale de
+# `docker/.env` (copia de `docker/.env.example`, permisos 600), y la web solo
+# escucha en 127.0.0.1. Lo que llega de Internet entra por `cloudflared`.
+#
+# Orden de arranque: postgres sano -> migrate termina bien -> web y worker.
+
+name: repogithubmind
+
+x-app-env: &app-env
+  NODE_ENV: production
+  DATABASE_URL: postgres://rgm:${POSTGRES_PASSWORD:?falta POSTGRES_PASSWORD en docker/.env}@postgres:5432/repogithubmind
+  AUTH_SECRET: ${AUTH_SECRET:?falta AUTH_SECRET en docker/.env}
+  AUTH_URL: ${AUTH_URL:?falta AUTH_URL en docker/.env}
+  TRUST_PROXY: ${TRUST_PROXY:-true}
+  GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+  GITHUB_FAKE: '0'
+  AI_ANALYSIS_ENABLED: ${AI_ANALYSIS_ENABLED:-false}
+  AI_PROVIDER: ${AI_PROVIDER:-openrouter}
+  AI_MODEL_ANALYSIS: ${AI_MODEL_ANALYSIS:-}
+  AI_EMBEDDING_PROVIDER: ${AI_EMBEDDING_PROVIDER:-openrouter}
+  AI_MODEL_EMBEDDING: ${AI_MODEL_EMBEDDING:-}
+  AI_API_KEY: ${AI_API_KEY:-}
+  AI_MAX_README_CHARS: ${AI_MAX_README_CHARS:-12000}
+  AI_ANALYSIS_TTL_DAYS: ${AI_ANALYSIS_TTL_DAYS:-90}
+  DEBUG_HTTP_ERRORS: 'false'
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rgm
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?falta POSTGRES_PASSWORD en docker/.env}
+      POSTGRES_DB: repogithubmind
+    volumes:
+      - rgm-postgres-prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U rgm -d repogithubmind']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  migrate:
+    image: repogithubmind-worker:${IMAGE_TAG:-latest}
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.worker
+    environment: *app-env
+    working_dir: /app/packages/db
+    command: ['node', '--import', 'tsx', 'src/migrate.ts']
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+
+  web:
+    image: repogithubmind-web:${IMAGE_TAG:-latest}
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.web
+    restart: unless-stopped
+    environment: *app-env
+    ports:
+      - '127.0.0.1:${WEB_PORT:-3000}:3000'
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  worker:
+    image: repogithubmind-worker:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment: *app-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  # Solo con `--profile tunnel` y CLOUDFLARE_TUNNEL_TOKEN en docker/.env: la
+  # conexión es saliente, así que el VPS no abre ningún puerto a Internet.
+  cloudflared:
+    image: cloudflare/cloudflared:2026.9.1
+    profiles: ['tunnel']
+    restart: unless-stopped
+    command: ['tunnel', '--no-autoupdate', 'run']
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      - web
+
+volumes:
+  rgm-postgres-prod:
