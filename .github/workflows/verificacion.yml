@@ -185,6 +185,19 @@ jobs:
     needs: codigo
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # Las mutaciones de producto (ADR-0004, ADR-0005) ejecutan pruebas de
+    # integración, así que el job lleva el mismo PostgreSQL que `verificar`.
+    # Sin package.json el servicio arranca y nadie lo usa.
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: rgm
+          POSTGRES_PASSWORD: rgm
+          POSTGRES_DB: repogithubmind_test
+        ports: ['5434:5432']
+        options: >-
+          --health-cmd "pg_isready -U rgm" --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
