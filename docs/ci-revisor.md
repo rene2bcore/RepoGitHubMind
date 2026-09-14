@@ -6,25 +6,25 @@
 
 `.github/workflows/revision-adversarial.yml` lanza a Claude sobre cada cambio propuesto y publica el informe en el PR.
 
-| | |
-|---|---|
-| **Instrucciones** | `.claude/agents/adversarial-reviewer.md`, sin su frontmatter |
-| **Calibración** | [`REVIEW.md`](../REVIEW.md), en la raíz. Una pantalla |
-| **El porqué de cada decisión** | [`.github/calibracion-revision.md`](../.github/calibracion-revision.md). **No se inyecta** |
-| **Herramientas** | `Read`, `Grep`, `Glob`. Todo lo que escribe o sale a la red va negado explícitamente |
-| **Modelo** | `--model sonnet --effort medium`. Las dos palancas de coste |
-| **CLI** | `@anthropic-ai/claude-code@2.1.252`, fijado porque corre donde vive la credencial |
-| **Topes** | `--max-turns 40` turnos del modelo y `timeout-minutes: 10` de reloj del runner. Son dos cosas distintas |
-| **Bloquea** | **No.** Lo determinista bloquea; el revisor informa |
+|                                |                                                                                                         |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| **Instrucciones**              | `.claude/agents/adversarial-reviewer.md`, sin su frontmatter                                            |
+| **Calibración**                | [`REVIEW.md`](../REVIEW.md), en la raíz. Una pantalla                                                   |
+| **El porqué de cada decisión** | [`.github/calibracion-revision.md`](../.github/calibracion-revision.md). **No se inyecta**              |
+| **Herramientas**               | `Read`, `Grep`, `Glob`. Todo lo que escribe o sale a la red va negado explícitamente                    |
+| **Modelo**                     | `--model sonnet --effort medium`. Las dos palancas de coste                                             |
+| **CLI**                        | `@anthropic-ai/claude-code@2.1.252`, fijado porque corre donde vive la credencial                       |
+| **Topes**                      | `--max-turns 40` turnos del modelo y `timeout-minutes: 10` de reloj del runner. Son dos cosas distintas |
+| **Bloquea**                    | **No.** Lo determinista bloquea; el revisor informa                                                     |
 
 El diff se calcula en el runner y se le entrega **ya escrito en un fichero**, así que el revisor no necesita shell para verlo. Es la defensa que sigue en pie aunque falle cualquier otra. Se excluyen del diff la prosa `.md`, `pnpm-lock.yaml` y `components/ui/`: ninguna de las siete categorías graves de `REVIEW.md` puede darse ahí. `docs/api/openapi.json` **sí va**: es el contrato.
 
 ## Las dos credenciales, y no se mezclan
 
-| Secreto | De dónde sale | Contrapartida |
-|---|---|---|
+| Secreto                   | De dónde sale                                        | Contrapartida                                                                  |
+| ------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------ |
 | `CLAUDE_CODE_OAUTH_TOKEN` | `claude setup-token` en local, contra la suscripción | No hay factura por token, pero **gasta la misma cuota que usas para trabajar** |
-| `ANTHROPIC_API_KEY` | `console.anthropic.com` | Se factura aparte |
+| `ANTHROPIC_API_KEY`       | `console.anthropic.com`                              | Se factura aparte                                                              |
 
 Cruzarlas falla en la primera llamada, sin gastar nada y sin decir por qué. OpenRouter, Cline o cualquier otro proveedor **no sirven** aquí; y no confundir con los proveedores de IA del producto, que son otra cosa (maestro §19).
 

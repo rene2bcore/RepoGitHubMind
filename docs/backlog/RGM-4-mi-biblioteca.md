@@ -62,7 +62,7 @@ DADO un README con `<script>` o `<iframe>`
 CUANDO abro el detalle
 ENTONCES no se ejecuta ni se incrusta nada y el resto del Markdown se ve.
 
-*Motivo: el maestro §43 lo exige; el PRD lo tiene como no funcional sin historia. Se ancla aquí porque el detalle es de esta historia.*
+_Motivo: el maestro §43 lo exige; el PRD lo tiene como no funcional sin historia. Se ancla aquí porque el detalle es de esta historia._
 
 ## Fuera de alcance
 

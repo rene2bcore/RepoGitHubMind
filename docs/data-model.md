@@ -35,13 +35,15 @@ erDiagram
     accounts {
         uuid id PK
         uuid user_id FK
-        text provider "credentials; github y google en R2"
+        text provider "github y google en R2; vacia en R1"
         text provider_account_id
+        timestamptz created_at
     }
     sessions {
-        text session_token PK
+        text token PK "opaco, 32 bytes aleatorios"
         uuid user_id FK
-        timestamptz expires
+        timestamptz expires_at
+        timestamptz created_at
     }
     repositories {
         uuid id PK
@@ -167,33 +169,33 @@ erDiagram
     }
 ```
 
-`accounts`, `sessions` y `verification_tokens` (no dibujada) son las tablas que exige el adaptador de Drizzle para Auth.js. Si `pg-boss` resulta la cola elegida ([ADR-0010](adr/0010-cola-de-trabajos-en-postgresql.md)), `background_jobs` la sustituye su propio esquema `pgboss` y aquí queda solo la vista de estados que lee la interfaz.
+`sessions` guarda las sesiones propias de R1 ([ADR-0013](adr/0013-sesion-propia-en-vez-de-authjs.md)): cerrar sesión borra la fila. `accounts` y `verification_tokens` (no dibujada) tienen la forma que el adaptador de Drizzle para Auth.js exige y se crean ya para no migrar dos veces cuando entren GitHub OAuth y Google en R2; en R1 están vacías. Columnas reales en `packages/db/src/schema.ts` y en `packages/db/migrations/`. Si `pg-boss` resulta la cola elegida ([ADR-0010](adr/0010-cola-de-trabajos-en-postgresql.md)), `background_jobs` la sustituye su propio esquema `pgboss` y aquí queda solo la vista de estados que lee la interfaz.
 
 ## Restricciones e índices
 
-| Tabla | Restricción o índice | Por qué |
-|---|---|---|
-| `users` | único sobre `lower(email)` | La misma persona no puede registrarse dos veces con otras mayúsculas |
-| `repositories` | único `github_repository_id`; único `full_name` | El id de GitHub es el identificador estable; `full_name` normalizado evita duplicados por variantes de URL (§30) |
-| `repositories` | GIN sobre `search_vector`; índices sobre `github_pushed_at`, `stars`, `primary_language`, `license` | Búsqueda léxica y filtros de la biblioteca (§69) |
-| `repository_embeddings` | índice HNSW sobre `embedding` **solo cuando el volumen lo justifique** | Con cientos de repositorios el escaneo secuencial basta; no se optimiza antes (§69) |
-| `user_repositories` | único `(user_id, repository_id)`; índices sobre `(user_id, status)`, `(user_id, favorite)`, `(user_id, saved_at)` | Una relación por cuenta y repositorio; los filtros de la biblioteca |
-| `repository_analyses` | único `repository_id` | Un análisis vigente por repositorio; los anteriores se sustituyen, no se acumulan |
-| `categories` | único `slug`; `path` único | Taxonomía controlada con jerarquía (§15) |
-| `background_jobs` | índice `(status, run_after)` | El worker toma el siguiente trabajo sin escanear |
+| Tabla                   | Restricción o índice                                                                                              | Por qué                                                                                                          |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `users`                 | único sobre `lower(email)`                                                                                        | La misma persona no puede registrarse dos veces con otras mayúsculas                                             |
+| `repositories`          | único `github_repository_id`; único `full_name`                                                                   | El id de GitHub es el identificador estable; `full_name` normalizado evita duplicados por variantes de URL (§30) |
+| `repositories`          | GIN sobre `search_vector`; índices sobre `github_pushed_at`, `stars`, `primary_language`, `license`               | Búsqueda léxica y filtros de la biblioteca (§69)                                                                 |
+| `repository_embeddings` | índice HNSW sobre `embedding` **solo cuando el volumen lo justifique**                                            | Con cientos de repositorios el escaneo secuencial basta; no se optimiza antes (§69)                              |
+| `user_repositories`     | único `(user_id, repository_id)`; índices sobre `(user_id, status)`, `(user_id, favorite)`, `(user_id, saved_at)` | Una relación por cuenta y repositorio; los filtros de la biblioteca                                              |
+| `repository_analyses`   | único `repository_id`                                                                                             | Un análisis vigente por repositorio; los anteriores se sustituyen, no se acumulan                                |
+| `categories`            | único `slug`; `path` único                                                                                        | Taxonomía controlada con jerarquía (§15)                                                                         |
+| `background_jobs`       | índice `(status, run_after)`                                                                                      | El worker toma el siguiente trabajo sin escanear                                                                 |
 
 ## Reglas de negocio que viven en el modelo
 
 Las que no se ven en una columna y por eso se documentan. Cada una con su prueba unitaria y su escenario en la spec.
 
-| Regla | Dónde | Prueba | Escenario |
-|---|---|---|---|
-| Toda variante de `github.com/owner/repo` (con `/`, `.git`, query, sin protocolo, mayúsculas) normaliza al mismo `full_name` en minúsculas | `packages/shared/src/github-url.ts` | `github-url.test.ts` | `specs/repositories`: «Una URL en cualquier variante» |
-| «Última actividad» es `github_pushed_at`, no `github_updated_at` | `repositories` | `activity.test.ts` | `specs/repositories`: «Última actividad» |
-| El análisis se reutiliza salvo `expires_at` pasado, `github_pushed_at` posterior a `ai_analyzed_at`, o forzado | `packages/ai/src/cache.ts` | `cache.test.ts` | `specs/ai`: «Un análisis por repositorio» |
-| El texto semántico se construye con nombre, descripción, resumen, propósito, casos de uso, categorías, tags y topics, y se vectoriza solo si cambió (`source_hash`) | `packages/search/src/semantic-text.ts` | `semantic-text.test.ts` | `specs/search`: «Qué se vectoriza» |
-| Riesgo de abandono: `HIGH` si archivado o sin push en 18 meses, `MEDIUM` sin push en 6 meses, `LOW` con push en 6 meses, `UNKNOWN` sin datos. Heurística transparente, nunca presentada como hecho | `packages/ai/src/heuristics.ts` | `heuristics.test.ts` | `specs/ai`: «Riesgo de abandono» |
-| Toda query sobre `user_repositories` filtra por el `user_id` de la sesión | `apps/web/src/modules/library` | prueba de integración con dos cuentas | `specs/library`: «Lo mío no lo ve nadie» |
+| Regla                                                                                                                                                                                              | Dónde                                  | Prueba                                | Escenario                                             |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- | ------------------------------------- | ----------------------------------------------------- |
+| Toda variante de `github.com/owner/repo` (con `/`, `.git`, query, sin protocolo, mayúsculas) normaliza al mismo `full_name` en minúsculas                                                          | `packages/shared/src/github-url.ts`    | `github-url.test.ts`                  | `specs/repositories`: «Una URL en cualquier variante» |
+| «Última actividad» es `github_pushed_at`, no `github_updated_at`                                                                                                                                   | `repositories`                         | `activity.test.ts`                    | `specs/repositories`: «Última actividad»              |
+| El análisis se reutiliza salvo `expires_at` pasado, `github_pushed_at` posterior a `ai_analyzed_at`, o forzado                                                                                     | `packages/ai/src/cache.ts`             | `cache.test.ts`                       | `specs/ai`: «Un análisis por repositorio»             |
+| El texto semántico se construye con nombre, descripción, resumen, propósito, casos de uso, categorías, tags y topics, y se vectoriza solo si cambió (`source_hash`)                                | `packages/search/src/semantic-text.ts` | `semantic-text.test.ts`               | `specs/search`: «Qué se vectoriza»                    |
+| Riesgo de abandono: `HIGH` si archivado o sin push en 18 meses, `MEDIUM` sin push en 6 meses, `LOW` con push en 6 meses, `UNKNOWN` sin datos. Heurística transparente, nunca presentada como hecho | `packages/ai/src/heuristics.ts`        | `heuristics.test.ts`                  | `specs/ai`: «Riesgo de abandono»                      |
+| Toda query sobre `user_repositories` filtra por el `user_id` de la sesión                                                                                                                          | `apps/web/src/modules/library`         | prueba de integración con dos cuentas | `specs/library`: «Lo mío no lo ve nadie»              |
 
 ## Lo que no se guarda, a propósito
 
@@ -204,10 +206,10 @@ Las que no se ven en una columna y por eso se documentan. Cada una con su prueba
 
 ## Entornos
 
-| Entorno | Base | Cómo se aísla |
-|---|---|---|
-| Desarrollo | `repogithubmind` en el `postgres` de `docker/` | `DATABASE_URL` |
-| Pruebas | `repogithubmind_test` en el mismo contenedor | `DATABASE_URL_TEST`, y el runner fuerza `NODE_ENV=test` de forma incondicional: la suite no puede escribir sobre la base de desarrollo ([ADR-0003](adr/0003-aislamiento-de-la-base-de-datos-en-pruebas.md)) |
-| Producción | No desplegado. Objetivo: PostgreSQL en el mismo VPS, con backups diarios | [`deployment-hostinger.md`](deployment-hostinger.md) |
+| Entorno    | Base                                                                     | Cómo se aísla                                                                                                                                                                                               |
+| ---------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Desarrollo | `repogithubmind` en el `postgres` de `docker/`                           | `DATABASE_URL`                                                                                                                                                                                              |
+| Pruebas    | `repogithubmind_test` en el mismo contenedor                             | `DATABASE_URL_TEST`, y el runner fuerza `NODE_ENV=test` de forma incondicional: la suite no puede escribir sobre la base de desarrollo ([ADR-0003](adr/0003-aislamiento-de-la-base-de-datos-en-pruebas.md)) |
+| Producción | No desplegado. Objetivo: PostgreSQL en el mismo VPS, con backups diarios | [`deployment-hostinger.md`](deployment-hostinger.md)                                                                                                                                                        |
 
 Todas las modificaciones de esquema van por migraciones de Drizzle; nunca SQL manual en producción (§82). Los seeds crean la taxonomía, un usuario de desarrollo con contraseña de ejemplo y unos repositorios de demostración (§83).

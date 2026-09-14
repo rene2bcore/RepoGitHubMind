@@ -57,7 +57,7 @@ DADO un repositorio guardado
 CUANDO se muestra
 ENTONCES «Última actividad» sale de `pushedAt`, y `createdAt`, `updatedAt`, `latestReleaseAt` y `metadataRefreshedAt` están disponibles por separado.
 
-*Motivo: el maestro §13 lo exige; el PRD lo recoge como RF-8 pero sin decir cuál se muestra.*
+_Motivo: el maestro §13 lo exige; el PRD lo recoge como RF-8 pero sin decir cuál se muestra._
 
 ## Fuera de alcance
 

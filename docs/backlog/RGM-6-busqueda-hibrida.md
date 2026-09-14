@@ -62,7 +62,7 @@ DADO un repositorio cuyo texto semántico no cambió
 CUANDO se vuelve a procesar
 ENTONCES no se pide un embedding nuevo ni se registra coste.
 
-*Motivo: el maestro §22 dice qué se vectoriza, no cuándo; se fija con un hash del texto, que es computable y barato.*
+_Motivo: el maestro §22 dice qué se vectoriza, no cuándo; se fija con un hash del texto, que es computable y barato._
 
 ## Fuera de alcance
 

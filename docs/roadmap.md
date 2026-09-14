@@ -6,22 +6,22 @@
 
 Las fases son las del §89 del maestro. Las historias, las de `docs/backlog/`.
 
-| Fase del maestro | Qué | Entrega académica | Historia |
-|---|---|---|---|
-| 0 | Auditoría y bootstrap del repositorio con el harness | **Entrega 1** (hecha) | - |
-| 1 | Auth y base de datos | Entrega 2 | H1 · RGM-2 |
-| 2 | Ingesta por URL | Entrega 2 | H2 · RGM-3 |
-| 3 | Metadata de GitHub | Entrega 2 | H2 · RGM-3 |
-| 4 | Mi biblioteca | Entrega 2 | H3 · RGM-4 |
-| 5 | Análisis de IA | Entrega final | H4 · RGM-5 |
-| 6 | Taxonomía | Entrega final (como seed y mapeo) | H4 · RGM-5 |
-| 7 | Búsqueda | Entrega final | H5 · RGM-6 |
-| 8 | Repositorios similares | Entrega final si cabe (`PA-5`) | S2 · RGM-8 |
-| 9 | Importación masiva `.txt` | Entrega final si cabe (`PA-5`) | S1 · RGM-7 |
-| 10 | Cola y Update All | Después del curso | - |
-| 11 | PWA y offline | Después del curso | - |
-| 12 | Pulido, pruebas, seguridad | Continuo | - |
-| 13 | Docker y documentación de Cloudflare | Entrega final (Docker) y después (Hostinger) | - |
+| Fase del maestro | Qué                                                  | Entrega académica                            | Historia   |
+| ---------------- | ---------------------------------------------------- | -------------------------------------------- | ---------- |
+| 0                | Auditoría y bootstrap del repositorio con el harness | **Entrega 1** (hecha)                        | -          |
+| 1                | Auth y base de datos                                 | Entrega 2                                    | H1 · RGM-2 |
+| 2                | Ingesta por URL                                      | Entrega 2                                    | H2 · RGM-3 |
+| 3                | Metadata de GitHub                                   | Entrega 2                                    | H2 · RGM-3 |
+| 4                | Mi biblioteca                                        | Entrega 2                                    | H3 · RGM-4 |
+| 5                | Análisis de IA                                       | Entrega final                                | H4 · RGM-5 |
+| 6                | Taxonomía                                            | Entrega final (como seed y mapeo)            | H4 · RGM-5 |
+| 7                | Búsqueda                                             | Entrega final                                | H5 · RGM-6 |
+| 8                | Repositorios similares                               | Entrega final si cabe (`PA-5`)               | S2 · RGM-8 |
+| 9                | Importación masiva `.txt`                            | Entrega final si cabe (`PA-5`)               | S1 · RGM-7 |
+| 10               | Cola y Update All                                    | Después del curso                            | -          |
+| 11               | PWA y offline                                        | Después del curso                            | -          |
+| 12               | Pulido, pruebas, seguridad                           | Continuo                                     | -          |
+| 13               | Docker y documentación de Cloudflare                 | Entrega final (Docker) y después (Hostinger) | -          |
 
 ### Lo que MVP-R1 exige y la vertical deja fuera
 

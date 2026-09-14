@@ -62,7 +62,7 @@ DADO un repositorio con pushes posteriores al análisis
 CUANDO alguien lo guarda o fuerza
 ENTONCES se encola un análisis nuevo; si no cambió y no caducó, no.
 
-*Motivo: el maestro §21 dice «cambió significativamente» sin definirlo; se fija en `githubPushedAt` posterior a `aiAnalyzedAt`, que es computable.*
+_Motivo: el maestro §21 dice «cambió significativamente» sin definirlo; se fija en `githubPushedAt` posterior a `aiAnalyzedAt`, que es computable._
 
 ## Fuera de alcance
 
