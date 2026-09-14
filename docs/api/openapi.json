@@ -1,0 +1,289 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "RepoGitHubMind API",
+    "version": "0.1.0",
+    "description": "Contrato de los Route Handlers bajo /api/v1. Hasta la Entrega 2 este fichero se escribe a mano como contrato objetivo (H-01); desde entonces se genera desde los esquemas Zod con `pnpm openapi:generate` y CI comprueba que el fichero versionado coincide con el generado (ADR-0001). Las rutas de Auth.js (/api/auth/*) y las Server Actions no forman parte del contrato. Toda respuesta de éxito va envuelta en { data } y toda respuesta de error en { errors: [...] }."
+  },
+  "security": [{ "session": [] }],
+  "components": {
+    "securitySchemes": {
+      "session": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "authjs.session-token",
+        "description": "Cookie de sesión de Auth.js. La identidad se toma siempre de la sesión en el servidor, nunca de un userId del cliente."
+      }
+    },
+    "schemas": {
+      "Errors": {
+        "type": "object",
+        "required": ["errors"],
+        "properties": {
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["message"],
+              "properties": {
+                "message": { "type": "string" },
+                "field": { "type": "string", "description": "Solo en 422: el campo que falló" },
+                "rule": { "type": "string", "description": "Solo en 422: la regla que falló, estable para que el frontend la traduzca" }
+              }
+            }
+          }
+        }
+      },
+      "RegisterBody": {
+        "type": "object",
+        "required": ["email", "password", "passwordConfirmation"],
+        "properties": {
+          "email": { "type": "string", "format": "email", "maxLength": 254 },
+          "password": { "type": "string", "minLength": 8, "maxLength": 128 },
+          "passwordConfirmation": { "type": "string" }
+        }
+      },
+      "User": {
+        "type": "object",
+        "required": ["id", "email", "role", "createdAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "email": { "type": "string", "format": "email" },
+          "role": { "type": "string", "enum": ["USER", "ADMIN"] },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "SaveRepositoryBody": {
+        "type": "object",
+        "required": ["url"],
+        "properties": {
+          "url": { "type": "string", "description": "Cualquier variante de github.com/owner/repo. Se normaliza." },
+          "source": { "type": "string", "maxLength": 80, "description": "De dónde salió la URL: whatsapp, x, reddit, blog... Opcional." }
+        }
+      },
+      "Repository": {
+        "type": "object",
+        "required": ["id", "fullName", "owner", "name", "url", "stars", "forks", "archived", "githubPushedAt", "metadataRefreshedAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "githubRepositoryId": { "type": "integer" },
+          "fullName": { "type": "string" },
+          "owner": { "type": "string" },
+          "name": { "type": "string" },
+          "url": { "type": "string", "format": "uri" },
+          "description": { "type": ["string", "null"] },
+          "homepage": { "type": ["string", "null"] },
+          "primaryLanguage": { "type": ["string", "null"] },
+          "license": { "type": ["string", "null"], "description": "SPDX id que GitHub identifica, o null" },
+          "topics": { "type": "array", "items": { "type": "string" } },
+          "stars": { "type": "integer" },
+          "forks": { "type": "integer" },
+          "openIssues": { "type": "integer" },
+          "archived": { "type": "boolean" },
+          "githubCreatedAt": { "type": "string", "format": "date-time" },
+          "githubUpdatedAt": { "type": "string", "format": "date-time" },
+          "githubPushedAt": { "type": "string", "format": "date-time", "description": "Base de «última actividad»" },
+          "latestReleaseAt": { "type": ["string", "null"], "format": "date-time" },
+          "metadataRefreshedAt": { "type": "string", "format": "date-time" },
+          "analysis": { "oneOf": [{ "$ref": "#/components/schemas/RepositoryAnalysis" }, { "type": "null" }] },
+          "categories": { "type": "array", "items": { "$ref": "#/components/schemas/Category" } }
+        }
+      },
+      "RepositoryAnalysis": {
+        "type": "object",
+        "required": ["status", "aiAnalyzedAt"],
+        "properties": {
+          "status": { "type": "string", "enum": ["PENDING", "COMPLETED", "FAILED", "DISABLED"] },
+          "summary": { "type": "string", "maxLength": 200 },
+          "purpose": { "type": "string" },
+          "mainUseCases": { "type": "array", "maxItems": 5, "items": { "type": "string" } },
+          "tags": { "type": "array", "items": { "type": "string" } },
+          "installationSummary": { "type": "string" },
+          "advantages": { "type": "array", "maxItems": 3, "items": { "type": "string" } },
+          "limitations": { "type": "array", "maxItems": 3, "items": { "type": "string" } },
+          "maturity": { "type": "string" },
+          "abandonmentRisk": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH", "UNKNOWN"], "description": "Valoración heurística, nunca presentada como hecho" },
+          "aiConfidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "aiAnalyzedAt": { "type": ["string", "null"], "format": "date-time" }
+        }
+      },
+      "Category": {
+        "type": "object",
+        "required": ["id", "slug", "name", "path"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "slug": { "type": "string" },
+          "name": { "type": "string" },
+          "path": { "type": "string", "description": "Ruta jerárquica, por ejemplo artificial-intelligence/agents/agent-memory" }
+        }
+      },
+      "PersonalData": {
+        "type": "object",
+        "required": ["status", "favorite", "rating", "notes", "savedAt"],
+        "description": "Solo visible para la cuenta dueña. Nunca sale a otro usuario.",
+        "properties": {
+          "status": { "$ref": "#/components/schemas/PersonalStatus" },
+          "favorite": { "type": "boolean" },
+          "rating": { "type": ["integer", "null"], "minimum": 1, "maximum": 5 },
+          "notes": { "type": ["string", "null"], "maxLength": 4000 },
+          "source": { "type": ["string", "null"] },
+          "savedAt": { "type": "string", "format": "date-time" },
+          "reviewedAt": { "type": ["string", "null"], "format": "date-time" }
+        }
+      },
+      "PersonalStatus": {
+        "type": "string",
+        "enum": ["NEW", "TO_REVIEW", "REVIEWED", "TESTING", "INSTALLED", "USING", "FAVORITE", "REJECTED", "ARCHIVED"]
+      },
+      "UpdatePersonalBody": {
+        "type": "object",
+        "minProperties": 1,
+        "properties": {
+          "status": { "$ref": "#/components/schemas/PersonalStatus" },
+          "favorite": { "type": "boolean" },
+          "rating": { "type": ["integer", "null"], "minimum": 1, "maximum": 5 },
+          "notes": { "type": ["string", "null"], "maxLength": 4000 }
+        }
+      },
+      "UserRepository": {
+        "type": "object",
+        "required": ["id", "repository", "personal"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "description": "Id de la relación privada, no del repositorio global" },
+          "repository": { "$ref": "#/components/schemas/Repository" },
+          "personal": { "$ref": "#/components/schemas/PersonalData" }
+        }
+      },
+      "SearchResult": {
+        "type": "object",
+        "required": ["repository", "score", "why"],
+        "properties": {
+          "repository": { "$ref": "#/components/schemas/Repository" },
+          "personal": { "oneOf": [{ "$ref": "#/components/schemas/PersonalData" }, { "type": "null" }], "description": "Solo cuando el repositorio está en la biblioteca de quien busca" },
+          "score": { "type": "number", "description": "Puntuación de la fusión RRF" },
+          "why": { "type": "string", "maxLength": 200, "description": "Explicación corta de por qué aparece" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/v1/auth/register": {
+      "post": {
+        "security": [],
+        "summary": "Crear una cuenta con email y contraseña, y abrir sesión",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RegisterBody" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Cuenta creada y sesión abierta",
+            "content": { "application/json": { "schema": { "type": "object", "required": ["data"], "properties": { "data": { "$ref": "#/components/schemas/User" } } } } }
+          },
+          "422": { "description": "Validación: email mal formado, contraseña corta, confirmación distinta, o email ya registrado con cualquier combinación de mayúsculas", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Errors" } } } },
+          "429": { "description": "Demasiados intentos desde la misma dirección", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Errors" } } } },
+          "500": { "description": "Error interno del servidor, con la forma cerrada del proyecto y sin detalle", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Errors" } } } }
+        }
+      }
+    },
+    "/api/v1/repositories": {
+      "post": {
+        "summary": "Guardar en mi biblioteca un repositorio público de GitHub a partir de su URL",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SaveRepositoryBody" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Guardado. La metadata de GitHub ya está; el análisis de IA llega después en segundo plano",
+            "content": { "application/json": { "schema": { "type": "object", "required": ["data"], "properties": { "data": { "$ref": "#/components/schemas/UserRepository" } } } } }
+          },
+          "200": {
+            "description": "Ya estaba en mi biblioteca: se devuelve tal cual, sin duplicar",
+            "content": { "application/json": { "schema": { "type": "object", "required": ["data"], "properties": { "data": { "$ref": "#/components/schemas/UserRepository" } } } } }
+          },
+          "401": { "description": "Sin sesión", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Errors" } } } },
+          "422": { "description": "La URL no es de GitHub o no se puede normalizar a owner/repo", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Errors" } } } },
+          "404": { "description": "GitHub no conoce ese repositorio, o es privado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Errors" } } } },
+          "429": { "description": "Rate limit propio o de GitHub; reintentar más tarde", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Errors" } } } },
+          "500": { "description": "Error interno del servidor", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Errors" } } } }
+        }
+      },
+      "get": {
+        "summary": "Mi biblioteca, con filtros y orden",
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "$ref": "#/components/schemas/PersonalStatus" } },
+          { "name": "favorite", "in": "query", "schema": { "type": "boolean" } },
+          { "name": "language", "in": "query", "schema": { "type": "string" } },
+          { "name": "license", "in": "query", "schema": { "type": "string" } },
+          { "name": "category", "in": "query", "schema": { "type": "string" }, "description": "slug de categoría" },
+          { "name": "minStars", "in": "query", "schema": { "type": "integer", "minimum": 0 } },
+          { "name": "sort", "in": "query", "schema": { "type": "string", "enum": ["savedAt", "pushedAt", "stars", "name", "rating"], "default": "savedAt" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1, "default": 1 } },
+          { "name": "pageSize", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 24 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Solo mis relaciones privadas. Nunca las de otra cuenta",
+            "content": { "application/json": { "schema": { "type": "object", "required": ["data", "meta"], "properties": { "data": { "type": "array", "items": { "$ref": "#/components/schemas/UserRepository" } }, "meta": { "type": "object", "required": ["page", "pageSize", "total"], "properties": { "page": { "type": "integer" }, "pageSize": { "type": "integer" }, "total": { "type": "integer" } } } } } } }
+          },
+          "401": { "description": "Sin sesión", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Errors" } } } },
+          "422": { "description": "Un filtro o un orden fuera del dominio se rechaza, no se ignora", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Errors" } } } },
+          "500": { "description": "Error interno del servidor", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Errors" } } } }
+        }
+      }
+    },
+    "/api/v1/repositories/{id}": {
+      "get": {
+        "summary": "Un repositorio de mi biblioteca, con su análisis y mis datos personales",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" }, "description": "Id de la relación privada (UserRepository)" }],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object", "required": ["data"], "properties": { "data": { "$ref": "#/components/schemas/UserRepository" } } } } } },
+          "401": { "description": "Sin sesión", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Errors" } } } },
+          "404": { "description": "No existe, o pertenece a otra cuenta: las dos cosas responden igual", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Errors" } } } },
+          "422": { "description": "El id no es un UUID. Se valida antes de resolver (ADR-0005)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Errors" } } } },
+          "500": { "description": "Error interno del servidor", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Errors" } } } }
+        }
+      }
+    },
+    "/api/v1/repositories/{id}/personal": {
+      "patch": {
+        "summary": "Cambiar mi estado, favorito, rating o notas sobre un repositorio",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdatePersonalBody" } } }
+        },
+        "responses": {
+          "200": { "description": "Lo persistido, releído de la base", "content": { "application/json": { "schema": { "type": "object", "required": ["data"], "properties": { "data": { "$ref": "#/components/schemas/UserRepository" } } } } } },
+          "401": { "description": "Sin sesión", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Errors" } } } },
+          "404": { "description": "No existe, o pertenece a otra cuenta", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Errors" } } } },
+          "422": { "description": "Estado fuera del dominio, rating fuera de 1..5, nota demasiado larga, o cuerpo vacío. Se valida antes de resolver", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Errors" } } } },
+          "500": { "description": "Error interno del servidor", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Errors" } } } }
+        }
+      }
+    },
+    "/api/v1/search": {
+      "get": {
+        "summary": "Búsqueda híbrida en lenguaje natural con filtros",
+        "parameters": [
+          { "name": "q", "in": "query", "required": true, "schema": { "type": "string", "minLength": 2, "maxLength": 200 } },
+          { "name": "scope", "in": "query", "schema": { "type": "string", "enum": ["library", "global"], "default": "library" }, "description": "library busca en mi biblioteca (repositorio + mis datos); global busca en el corpus de repositorios y nunca incluye datos personales de nadie" },
+          { "name": "category", "in": "query", "schema": { "type": "string" } },
+          { "name": "language", "in": "query", "schema": { "type": "string" } },
+          { "name": "license", "in": "query", "schema": { "type": "string" } },
+          { "name": "minStars", "in": "query", "schema": { "type": "integer", "minimum": 0 } },
+          { "name": "status", "in": "query", "schema": { "$ref": "#/components/schemas/PersonalStatus" }, "description": "Solo con scope=library" },
+          { "name": "favorite", "in": "query", "schema": { "type": "boolean" }, "description": "Solo con scope=library" },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 50, "default": 20 } }
+        ],
+        "responses": {
+          "200": { "description": "Resultados fusionados por Reciprocal Rank Fusion entre búsqueda léxica y semántica", "content": { "application/json": { "schema": { "type": "object", "required": ["data"], "properties": { "data": { "type": "array", "items": { "$ref": "#/components/schemas/SearchResult" } } } } } } },
+          "401": { "description": "Sin sesión", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Errors" } } } },
+          "422": { "description": "Consulta vacía o filtro fuera del dominio", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Errors" } } } },
+          "500": { "description": "Error interno del servidor", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Errors" } } } }
+        }
+      }
+    }
+  }
+}

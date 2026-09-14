@@ -1,0 +1,23 @@
+# La mitad que la auditoría de dependencias en CI no cubre: detectar es una
+# cosa, y que el arreglo llegue como PR sin que nadie se acuerde es otra. En
+# el proyecto de origen había cuatro vulnerabilidades, dos altas, y nadie lo
+# sabía hasta que se añadió el paso de auditoría.
+version: 2
+updates:
+  # Un solo ecosistema npm en la raíz: pnpm workspaces resuelve todo el
+  # monorepo desde el lockfile de la raíz.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      dependencias:
+        patterns: ['*']
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directory: /docker
+    schedule:
+      interval: weekly
