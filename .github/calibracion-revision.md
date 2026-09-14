@@ -87,8 +87,8 @@ Por R-14, esta comprobación no cuenta hasta verla morder. El procedimiento:
 
 | Qué | Visto |
 |---|---|
-| La puerta omite en verde sin credencial | No aplica: la credencial se puso el 2026-09-14 antes del primer push |
+| La puerta omite en verde sin credencial | No aplica: la credencial se puso el 2026-09-14 antes del primer push. Sí se vio la otra puerta: en `push` sin PR abierto, verde con «la rama no tiene PR abierto» (run `34818446587`) |
 | El revisor nombra un defecto plantado | Pendiente, Entrega 2 |
 | Credencial inválida sale en rojo | Pendiente |
-| El informe llega al PR | Pendiente: primer PR con código en la Entrega 2 |
+| El informe llega al PR | Visto el 2026-09-14 en el PR #1, run `34818658486`: comentario publicado con «Graves: Ninguno. Menores: Ninguno» |
 | `--disallowed-tools` acota de verdad al revisor | No se ha visto: el revisor nunca ha intentado usar una herramienta negada. La defensa que sí está en pie es que el diff se entrega en un fichero |
