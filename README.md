@@ -4,7 +4,7 @@ Las URLs de repositorios interesantes de GitHub acaban en chats de WhatsApp, not
 
 Producto open source de **2BCORE** bajo [Apache-2.0](LICENSE) y, a la vez, Proyecto Final del curso AI4Devs de LIDR. El repositorio es también el registro de **cómo** se construye: PRD y specs, trazabilidad de historia a código, decisiones en ADR, y reglas de proceso bajadas a comprobaciones que corren en CI.
 
-> **Estado a 2026-09-14:** Entrega 2 en curso. H1 (cuentas y sesión), H2 (guardar por URL con la metadata de GitHub, cola y worker) y H3 (mi biblioteca: estado, favorito, rating, notas, filtros y detalle con README saneado) están construidas y verificadas, y H4 (análisis de IA cacheado por repositorio con OpenRouter, taxonomía controlada, coste en `ai_usage` y filtro por categoría) está en revisión: el flujo E2E entero a escritorio y a 375 px con dos cuentas y el worker real, y el contrato con nueve rutas. El número de pruebas lo da [`CLAUDE.md`](CLAUDE.md). Las capturas están en [`docs/evidencia/`](docs/evidencia/). La búsqueda (H5) va a la Entrega final.
+> **Estado a 2026-09-14:** Entrega 2 en curso. H1 (cuentas y sesión), H2 (guardar por URL con la metadata de GitHub, cola y worker) y H3 (mi biblioteca: estado, favorito, rating, notas, filtros y detalle con README saneado) están construidas y verificadas, igual que H4 (análisis de IA cacheado por repositorio con OpenRouter, taxonomía controlada, coste en `ai_usage` y filtro por categoría). H5 (búsqueda híbrida en lenguaje natural con PostgreSQL FTS, pgvector y RRF, en mi biblioteca o en el corpus global, con filtros en la URL) está en revisión para la Entrega final: el flujo E2E entero a escritorio y en móvil con dos cuentas y el worker real, y el contrato con diez rutas. El número de pruebas lo da [`CLAUDE.md`](CLAUDE.md). Las capturas están en [`docs/evidencia/`](docs/evidencia/).
 
 ## Ficha del proyecto
 
@@ -60,8 +60,8 @@ Vertical académica de MVP-R1. Lo que MVP-R1 incluye y esta vertical no, en [`do
 | [H1 · Cuentas y sesión](docs/backlog/RGM-2-cuentas-y-sesion.md)                                                 | RGM-2 | must-have   | Construida en la Entrega 2 (RGM-9 datos, RGM-10 backend, RGM-11 frontend) |
 | [H2 · Guardar un repositorio por URL con metadata de GitHub](docs/backlog/RGM-3-guardar-repositorio-por-url.md) | RGM-3 | must-have   | Construida en la Entrega 2                                                |
 | [H3 · Mi biblioteca: estado, favorito, rating y notas](docs/backlog/RGM-4-mi-biblioteca.md)                     | RGM-4 | must-have   | Construida en la Entrega 2                                                |
-| [H4 · Análisis de IA cacheado con proveedor reemplazable](docs/backlog/RGM-5-analisis-ia.md)                    | RGM-5 | must-have   | Por hacer                                                                 |
-| [H5 · Búsqueda híbrida en lenguaje natural](docs/backlog/RGM-6-busqueda-hibrida.md)                             | RGM-6 | must-have   | Por hacer                                                                 |
+| [H4 · Análisis de IA cacheado con proveedor reemplazable](docs/backlog/RGM-5-analisis-ia.md)                    | RGM-5 | must-have   | Construida para la Entrega final (PR #12)                                 |
+| [H5 · Búsqueda híbrida en lenguaje natural](docs/backlog/RGM-6-busqueda-hibrida.md)                             | RGM-6 | must-have   | En revisión                                                               |
 | [S1 · Importación masiva desde texto o `.txt`](docs/backlog/RGM-7-importacion-masiva.md)                        | RGM-7 | should-have | Por hacer                                                                 |
 | [S2 · Repositorios similares](docs/backlog/RGM-8-repositorios-similares.md)                                     | RGM-8 | should-have | Por hacer                                                                 |
 
