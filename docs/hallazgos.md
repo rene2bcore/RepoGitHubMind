@@ -23,14 +23,15 @@ La severidad no se escribe: es un criterio que quien escribe inventa. El orden e
 
 ## Índice
 
-| #    | Hallazgo                                                                               | Estado                                              |
-| ---- | -------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| H-01 | CI no puede ejecutar lint, tipos, pruebas ni contrato hasta que exista código          | Resuelto · `feat/RGM-2-cuentas-y-sesion` 2026-09-14 |
-| H-02 | El hook de formato del harness rompía toda escritura al llegar con placeholders        | Resuelto · `main` 2026-09-14                        |
-| H-03 | El merge de historias entre producto y fork pisaría `readme.md` en Windows             | Resuelto · ADR-0012, 2026-09-14                     |
-| H-04 | Los componentes de `components/ui/` están escritos a mano, no traídos con `shadcn add` | Deuda aceptada, con fecha de cierre: H3 (RGM-4)     |
-| H-05 | Los puertos 5432 y 5433 del host ya estaban ocupados por otros contenedores            | Resuelto · `feat/RGM-2-cuentas-y-sesion` 2026-09-14 |
-| H-06 | Drizzle envuelve el error del driver y el código SQLSTATE no está en el nivel superior | Resuelto · `feat/RGM-2-cuentas-y-sesion` 2026-09-14 |
+| #    | Hallazgo                                                                               | Estado                                                  |
+| ---- | -------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| H-01 | CI no puede ejecutar lint, tipos, pruebas ni contrato hasta que exista código          | Resuelto · `feat/RGM-2-cuentas-y-sesion` 2026-09-14     |
+| H-02 | El hook de formato del harness rompía toda escritura al llegar con placeholders        | Resuelto · `main` 2026-09-14                            |
+| H-03 | El merge de historias entre producto y fork pisaría `readme.md` en Windows             | Resuelto · ADR-0012, 2026-09-14                         |
+| H-04 | Los componentes de `components/ui/` están escritos a mano, no traídos con `shadcn add` | Deuda aceptada, con fecha de cierre: H3 (RGM-4)         |
+| H-05 | Los puertos 5432 y 5433 del host ya estaban ocupados por otros contenedores            | Resuelto · `feat/RGM-2-cuentas-y-sesion` 2026-09-14     |
+| H-06 | Drizzle envuelve el error del driver y el código SQLSTATE no está en el nivel superior | Resuelto · `feat/RGM-2-cuentas-y-sesion` 2026-09-14     |
+| H-07 | El rate limit se evadía rotando `x-forwarded-for`, que cualquiera escribe              | Resuelto · `fix/RGM-2-rate-limit-por-cuenta` 2026-09-14 |
 
 ## Plantilla de entrada
 
@@ -147,6 +148,22 @@ La Definition of Done de RGM-11 pide `components/ui/` traídos con `shadcn add` 
 **Estado:** Resuelto en `feat/RGM-2-cuentas-y-sesion` el 2026-09-14: `isUniqueViolation` recorre `cause`.
 
 **Qué lo vigila:** entrada `ADR-0005` de `mutaciones.mjs` y la prueba de la carrera de altas en `apps/web/tests/auth.test.ts`.
+
+## H-07 · El rate limit se evadía rotando `x-forwarded-for`, que cualquiera escribe
+
+**Rama:** `main` tras el PR #4 · **Fecha:** 2026-09-14 · **Origen:** revisión adversarial 1 del PR #4 (grave, categoría Autorización)
+
+`clientAddress` leía `cf-connecting-ip` y `x-forwarded-for` sin comprobar que hubiera un proxy delante, y el límite de intentos de `/api/v1/auth/login` y `/register` usaba esa dirección como única clave. Una petición con una cabecera distinta cada vez nunca acumulaba intentos: fuerza bruta sin límite contra cualquier cuenta. La prueba del `429` pasaba porque enviaba siempre la misma cabecera.
+
+**Cómo se verificó:** prueba nueva «rotar la cabecera de dirección no da más intentos contra la misma cuenta»: en rojo con el código anterior (tres `401`), en verde con el arreglo (`401`, `401`, `429`).
+
+**Reproducción:** `git checkout 0b0cc2f -- apps/web/src/lib/http.ts apps/web/src/app/api/v1/auth/login/route.ts; pnpm vitest run auth` pone esa prueba en rojo.
+
+**Daño:** cualquier atacante externo podía probar contraseñas sin límite · **Radio:** 4 sitios: `apps/web/src/lib/http.ts:70` (`clientAddress`), `apps/web/src/app/api/v1/auth/login/route.ts:12`, `apps/web/src/app/api/v1/auth/register/route.ts:10`, `packages/shared/src/env.ts` (`TRUST_PROXY`) · **Reversibilidad:** sí · **Precedencia:** el mismo patrón se aplica a las rutas de H2 que llaman a GitHub
+
+**Estado:** Resuelto el 2026-09-14: la dirección solo se lee de las cabeceras con `TRUST_PROXY=true` (detrás de Cloudflare Tunnel), y login y registro limitan además por cuenta, que es el límite que aguanta aunque la dirección no se pueda creer.
+
+**Qué lo vigila:** `apps/web/tests/auth.test.ts` · «rotar la cabecera de dirección no da más intentos contra la misma cuenta (H-07)».
 
 ## Procedimiento al cambiar de rama base
 

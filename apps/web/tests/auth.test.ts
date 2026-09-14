@@ -163,6 +163,25 @@ describe('auth', () => {
       })
       configureRateLimit({ max: 1000, windowMs: 60_000 })
     })
+
+    it('rotar la cabecera de dirección no da más intentos contra la misma cuenta (H-07)', async () => {
+      configureRateLimit({ max: 2, windowMs: 60_000 })
+      const email = emailUnico('rotando')
+      let n = 0
+      const intento = () =>
+        login(
+          jsonRequest('/api/v1/auth/login', {
+            method: 'POST',
+            body: { email, password: 'x'.repeat(8) },
+            headers: { 'x-forwarded-for': `198.51.100.${++n}` },
+          }),
+          {},
+        )
+      expect((await intento()).status).toBe(401)
+      expect((await intento()).status).toBe(401)
+      expect((await intento()).status).toBe(429)
+      configureRateLimit({ max: 1000, windowMs: 60_000 })
+    })
   })
 
   describe('La sesión termina al salir', () => {
