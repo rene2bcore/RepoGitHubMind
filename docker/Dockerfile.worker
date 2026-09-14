@@ -8,7 +8,7 @@
 #   docker build -f docker/Dockerfile.worker -t repogithubmind-worker .
 
 FROM node:24-slim
-ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH NODE_ENV=production
+ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH
 RUN corepack enable
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
@@ -18,7 +18,12 @@ COPY packages/config/package.json packages/config/
 COPY packages/db/package.json packages/db/
 COPY packages/github/package.json packages/github/
 COPY packages/shared/package.json packages/shared/
-RUN pnpm install --frozen-lockfile --ignore-scripts --filter worker... --filter @rgm/db...
+# `tsx` es devDependency y hace falta en tiempo de ejecución: se instalan
+# también las de desarrollo, explícitamente, y NODE_ENV=production se fija
+# después para que no dependa de cómo interprete pnpm esa variable.
+RUN pnpm install --frozen-lockfile --ignore-scripts --prod=false --filter worker... --filter @rgm/db... \
+  && test -e apps/worker/node_modules/tsx && test -e packages/db/node_modules/tsx
+ENV NODE_ENV=production
 COPY --chown=node:node packages ./packages
 COPY --chown=node:node apps/worker ./apps/worker
 USER node

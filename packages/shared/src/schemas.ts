@@ -1,14 +1,4 @@
-import { z } from 'zod'
-import { extendZodWithOpenApi } from '@asteasolutions/zod-to-openapi'
-
-// Antes de construir ningún esquema: en Zod 4 los métodos se añaden al crear
-// cada instancia, así que la extensión tiene que existir cuando se crean.
-extendZodWithOpenApi(z)
-
-// Los mensajes por defecto en castellano: son los que ve la persona junto al
-// campo cuando un esquema no trae mensaje propio (specs/auth · «Errores
-// junto al campo»).
-z.config(z.locales.es())
+import { z } from './zod'
 
 /**
  * Los esquemas Zod son la única definición de entrada y salida de la API. Los

@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from './zod'
 
 /**
  * Variables de entorno, validadas al arrancar con Zod (prompt maestro §52).

@@ -14,7 +14,8 @@ export const DEV_USER = { email: 'dev@repogithubmind.local', password: 'desarrol
 
 export async function seed(): Promise<void> {
   // En producción no hay usuario de desarrollo: su contraseña está en este
-  // fichero. La taxonomía (H4) sí se siembra en todos los entornos.
+  // fichero. Hoy el seed no siembra nada más; la taxonomía llega con H4 y se
+  // sembrará en todos los entornos, antes de esta línea.
   if (process.env.NODE_ENV === 'production') return
   const db = getDb()
   const existing = await db
