@@ -1,0 +1,68 @@
+# Despliegue local y demo por Cloudflare Tunnel
+
+> **No ejecutado nunca** a 2026-09-14: no hay código ([H-01](hallazgos.md)). Lo que sigue es lo que el diseño exige ([prompt maestro](prompts/00-prompt-maestro.md) §46, §47, §49). Quien lo ejecute por primera vez lo convierte en procedimiento y lo fecha aquí.
+
+## Desarrollo
+
+Contenedores mínimos: `postgres` (con pgvector), `web`, `worker`. En desarrollo, `web` y `worker` pueden correr fuera de Docker si mejora la experiencia; `postgres` siempre dentro.
+
+```bash
+pnpm install --frozen-lockfile
+cp .env.example .env                                   # rellena AUTH_SECRET y AI_API_KEY
+docker compose -f docker/docker-compose.yml up -d postgres
+pnpm db:migrate
+pnpm db:seed
+pnpm dev                                               # web en http://localhost:3000 y worker
+```
+
+Todo en contenedores:
+
+```bash
+docker compose -f docker/docker-compose.yml up -d      # postgres, web y worker
+docker compose -f docker/docker-compose.yml logs -f worker
+```
+
+`docker/docker-compose.yml` crea dos bases en el mismo `postgres`: `repogithubmind` y `repogithubmind_test`. La suite usa la segunda por construcción ([ADR-0003](adr/0003-aislamiento-de-la-base-de-datos-en-pruebas.md)).
+
+## Demo R1: localhost expuesto por Cloudflare Tunnel
+
+Sin abrir puertos en el router ni en el firewall. Cloudflare Tunnel crea una conexión saliente desde la máquina hasta Cloudflare, y Cloudflare enruta un subdominio hacia ella con HTTPS.
+
+Requisitos: un dominio gestionado en Cloudflare (`PA-4` decide si se usa uno o se entrega video) y `cloudflared` instalado.
+
+```bash
+cloudflared tunnel login
+cloudflared tunnel create repogithubmind
+cloudflared tunnel route dns repogithubmind demo.TU-DOMINIO
+```
+
+`~/.cloudflared/config.yml`:
+
+```yaml
+tunnel: <id del túnel>
+credentials-file: /ruta/al/<id>.json
+ingress:
+  - hostname: demo.TU-DOMINIO
+    service: http://localhost:3000
+  - service: http_status:404
+```
+
+```bash
+cloudflared tunnel run repogithubmind
+```
+
+Antes de exponerlo:
+
+- `AUTH_URL=https://demo.TU-DOMINIO` en `.env`, y reiniciar `web`: Auth.js la lee al arrancar.
+- `NODE_ENV=production` y `pnpm build` para servir la build, no el servidor de desarrollo.
+- `DEBUG_HTTP_ERRORS` sin definir o `false`. Encendido devuelve traza en el cuerpo de los errores ([ADR-0004](adr/0004-el-volcado-de-depuracion-va-apagado.md)).
+- Un usuario de demo distinto del de desarrollo, con contraseña que no esté en ningún fichero.
+- Rate limiting activo: el túnel expone el registro a Internet.
+
+Cloudflare Workers no es requisito para nada (§49).
+
+## Comprobar que funciona
+
+1. Desde otro dispositivo (móvil con datos, no la wifi de casa), abrir `https://demo.TU-DOMINIO/register`.
+2. Recorrer el flujo del PRD sección 4 entero.
+3. Anotar aquí la fecha y qué falló la primera vez. Un despliegue que solo se ha visto pasar en la máquina donde se escribió está en la misma categoría que una comprobación que no se ha visto fallar.
