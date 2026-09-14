@@ -1,22 +1,19 @@
-import { Card } from '@/components/ui/card'
+import { redirect } from 'next/navigation'
+import { libraryQuerySchema } from '@rgm/shared'
+import { LibraryView } from '@/components/library-view'
+import { currentUser } from '@/lib/session'
+import { listUserRepositories } from '@/modules/repositories/service'
+
+export const dynamic = 'force-dynamic'
 
 /**
- * H1: la biblioteca existe y es privada. Vacía, explica qué es y cuál es la
- * primera acción (specs/library · «Biblioteca vacía con sesión nueva»). El
- * campo para pegar una URL llega con H2.
+ * La biblioteca, privada: el layout ya exige sesión y aquí se lee la lista de
+ * la cuenta desde el servidor, con los mismos parámetros validados que la
+ * API. Guardar y el resto de acciones van por `lib/api.ts` en el cliente.
  */
-export default function LibraryPage() {
-  return (
-    <main className="mx-auto max-w-5xl px-4 py-8">
-      <h1 className="mb-6 text-2xl font-semibold">Tu biblioteca</h1>
-      <Card>
-        <h2 className="mb-2 text-lg font-medium">Todavía no has guardado ningún repositorio</h2>
-        <p className="text-sm text-muted">
-          Esta es tu biblioteca personal de repositorios de GitHub. Pega la URL de uno y lo verás
-          aquí con sus estrellas, su licencia y su última actividad. Nadie más ve lo que guardas ni
-          lo que anotas.
-        </p>
-      </Card>
-    </main>
-  )
+export default async function LibraryPage() {
+  const user = await currentUser()
+  if (!user) redirect('/login')
+  const { items, meta } = await listUserRepositories(user.id, libraryQuerySchema.parse({}))
+  return <LibraryView initial={items} total={meta.total} />
 }
