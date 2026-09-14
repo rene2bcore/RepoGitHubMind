@@ -4,7 +4,7 @@ import type { ChatMessage } from './prompts/analyze'
 import type { AIProvider, AnalysisOutcome, AnalysisRequest } from './provider'
 import { analysisJsonSchema } from './schema'
 
-const ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions'
+const CHAT_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions'
 
 type FetchLike = typeof fetch
 
@@ -14,33 +14,79 @@ type ChatResponse = {
   error?: { code?: number | string; message?: string }
 }
 
+export type OpenRouterConnection = {
+  apiKey: string
+  fetchImpl?: FetchLike
+  timeoutMs?: number
+}
+
+/**
+ * Un `POST` a OpenRouter con la clave solo en la cabecera `Authorization`,
+ * que no aparece en ningún mensaje de error. Lo comparten el análisis y los
+ * embeddings: los dos hablan el formato de OpenAI.
+ *
+ * Reintentables (la cola los repite con backoff): red, tiempo agotado, `408`,
+ * `429` (con `retry-after` si viene), `5xx` y un `error` dentro de un `200`.
+ * No reintentables: `400`, `401`, `402`, `403`, porque esperar no arregla una
+ * clave o una petición mal hechas.
+ */
+export async function postOpenRouter<T extends { error?: { message?: string } }>(
+  endpoint: string,
+  body: unknown,
+  connection: OpenRouterConnection & { defaultTimeoutMs: number },
+): Promise<T> {
+  let res: Response
+  try {
+    res = await (connection.fetchImpl ?? fetch)(endpoint, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${connection.apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://github.com/rene2bcore/RepoGitHubMind',
+        'X-Title': 'RepoGitHubMind',
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(connection.timeoutMs ?? connection.defaultTimeoutMs),
+    })
+  } catch (error) {
+    const reason =
+      error instanceof Error && error.name === 'TimeoutError' ? 'tiempo agotado' : 'red'
+    throw new AIProviderCallError(`OpenRouter no respondió (${reason})`, { retryable: true })
+  }
+
+  const json = (await res.json().catch(() => null)) as T | null
+  if (!res.ok) {
+    const retryable = res.status === 408 || res.status === 429 || res.status >= 500
+    throw new AIProviderCallError(`OpenRouter respondió ${res.status}${detail(json)}`, {
+      retryable,
+      retryAfter: retryAfterFrom(res),
+    })
+  }
+  if (!json || json.error) {
+    throw new AIProviderCallError(`OpenRouter devolvió un error${detail(json)}`, {
+      retryable: true,
+    })
+  }
+  return json
+}
+
 /**
  * `AIProvider` sobre OpenRouter, que habla el formato de chat de OpenAI y da
  * acceso a varios modelos con una clave (ADR-0009, PA-2). El modelo llega de
  * fuera (`AI_MODEL_ANALYSIS` o el valor por defecto de `defaults.ts`); aquí
- * no se nombra ninguno. La clave solo viaja en la cabecera `Authorization` y
- * no aparece en ningún mensaje de error.
+ * no se nombra ninguno.
  *
  * Pide salida estructurada con `response_format` y `require_parameters`, para
  * que OpenRouter no enrute a un proveedor que ignore el esquema, y el coste
- * que OpenRouter declara en `usage.cost`.
- *
- * Reintentables (la cola los repite con backoff): red, tiempo agotado, `408`,
- * `429` (con `retry-after` si viene) y `5xx`. No reintentables: `400`, `401`,
- * `402`, `403`, porque esperar no arregla una clave o una petición mal hechas.
+ * que OpenRouter declara en `usage.cost`. Qué errores se reintentan, en
+ * `postOpenRouter`.
  */
 export class OpenRouterProvider implements AIProvider {
   readonly name = 'openrouter'
   readonly model: string
 
   constructor(
-    private readonly options: {
-      apiKey: string
-      model: string
-      fetchImpl?: FetchLike
-      timeoutMs?: number
-      maxTokens?: number
-    },
+    private readonly options: OpenRouterConnection & { model: string; maxTokens?: number },
   ) {
     this.model = options.model
   }
@@ -62,38 +108,10 @@ export class OpenRouterProvider implements AIProvider {
       provider: { require_parameters: true },
       usage: { include: true },
     }
-    let res: Response
-    try {
-      res = await (this.options.fetchImpl ?? fetch)(ENDPOINT, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${this.options.apiKey}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://github.com/rene2bcore/RepoGitHubMind',
-          'X-Title': 'RepoGitHubMind',
-        },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(this.options.timeoutMs ?? 60_000),
-      })
-    } catch (error) {
-      const reason =
-        error instanceof Error && error.name === 'TimeoutError' ? 'tiempo agotado' : 'red'
-      throw new AIProviderCallError(`OpenRouter no respondió (${reason})`, { retryable: true })
-    }
-
-    const json = (await res.json().catch(() => null)) as ChatResponse | null
-    if (!res.ok) {
-      const retryable = res.status === 408 || res.status === 429 || res.status >= 500
-      throw new AIProviderCallError(`OpenRouter respondió ${res.status}${detail(json)}`, {
-        retryable,
-        retryAfter: retryAfterFrom(res),
-      })
-    }
-    if (!json || json.error) {
-      throw new AIProviderCallError(`OpenRouter devolvió un error${detail(json)}`, {
-        retryable: true,
-      })
-    }
+    const json = await postOpenRouter<ChatResponse>(CHAT_ENDPOINT, body, {
+      ...this.options,
+      defaultTimeoutMs: 60_000,
+    })
     return {
       content: json.choices?.[0]?.message?.content ?? '',
       usage: {
@@ -106,7 +124,7 @@ export class OpenRouterProvider implements AIProvider {
 }
 
 /** El mensaje de error del proveedor, corto: va a `last_error`, nunca a la API. */
-function detail(json: ChatResponse | null): string {
+function detail(json: { error?: { message?: string } } | null): string {
   const message = json?.error?.message
   return message ? `: ${String(message).slice(0, 200)}` : ''
 }
