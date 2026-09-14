@@ -4,9 +4,12 @@ import {
   libraryQuerySchema,
   listMetaSchema,
   loginSchema,
+  personalUpdateSchema,
   registerSchema,
   saveRepositorySchema,
+  userRepositoryDetailSchema,
   userRepositorySchema,
+  uuidParamSchema,
   userSchema,
 } from '@rgm/shared'
 
@@ -46,6 +49,8 @@ export function buildDocument() {
   const userRepository = registry.register('UserRepository', userRepositorySchema)
   const saveRepositoryBody = registry.register('SaveRepositoryBody', saveRepositorySchema)
   const listMeta = registry.register('ListMeta', listMetaSchema)
+  const userRepositoryDetail = registry.register('UserRepositoryDetail', userRepositoryDetailSchema)
+  const personalUpdateBody = registry.register('PersonalUpdateBody', personalUpdateSchema)
 
   const errorResponse = (description: string) => ({
     description,
@@ -153,12 +158,46 @@ export function buildDocument() {
     },
   })
 
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/repositories/{id}',
+    summary: 'El detalle de mi relación con un repositorio, con README y lenguajes',
+    request: { params: uuidParamSchema },
+    responses: {
+      200: dataResponse('Mi relación, el repositorio y su README crudo', userRepositoryDetail),
+      401: errorResponse('Sin sesión'),
+      404: errorResponse('No existe, o pertenece a otra cuenta: la misma respuesta'),
+      500: errorResponse('Error interno del servidor'),
+    },
+  })
+
+  registry.registerPath({
+    method: 'patch',
+    path: '/api/v1/repositories/{id}/personal',
+    summary: 'Cambiar mi estado, favorito, rating o notas sobre un repositorio',
+    description:
+      'El cuerpo se valida antes de resolver el id: un valor fuera de rango es 422 aunque el id no exista. La respuesta es la relación releída de la base.',
+    request: {
+      params: uuidParamSchema,
+      body: { content: { 'application/json': { schema: personalUpdateBody } } },
+    },
+    responses: {
+      200: dataResponse('Mi relación actualizada', userRepository),
+      401: errorResponse('Sin sesión'),
+      404: errorResponse('No existe, o pertenece a otra cuenta: la misma respuesta'),
+      422: errorResponse(
+        'Estado fuera de los nueve, rating fuera de 1..5, notas de más de 4000 caracteres, o cuerpo vacío',
+      ),
+      500: errorResponse('Error interno del servidor'),
+    },
+  })
+
   const generator = new OpenApiGeneratorV31(registry.definitions)
   return generator.generateDocument({
     openapi: '3.1.0',
     info: {
       title: 'RepoGitHubMind API',
-      version: '0.3.0',
+      version: '0.4.0',
       description:
         'Contrato de los Route Handlers bajo /api/v1, generado desde los esquemas Zod con `pnpm openapi:generate` y vigilado en CI con `pnpm openapi:check` (ADR-0001). Toda respuesta de éxito va envuelta en { data } y toda respuesta de error en { errors: [...] }. Las Server Actions no forman parte del contrato.',
     },

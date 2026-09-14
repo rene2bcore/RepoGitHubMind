@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "RepoGitHubMind API",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "description": "Contrato de los Route Handlers bajo /api/v1, generado desde los esquemas Zod con `pnpm openapi:generate` y vigilado en CI con `pnpm openapi:check` (ADR-0001). Toda respuesta de éxito va envuelta en { data } y toda respuesta de error en { errors: [...] }. Las Server Actions no forman parte del contrato."
   },
   "security": [
@@ -442,6 +442,342 @@
           "page",
           "pageSize"
         ]
+      },
+      "UserRepositoryDetail": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "repository": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "fullName": {
+                "type": "string"
+              },
+              "owner": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "description": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "homepage": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "primaryLanguage": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "license": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "topics": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "stars": {
+                "type": "integer"
+              },
+              "forks": {
+                "type": "integer"
+              },
+              "openIssues": {
+                "type": "integer"
+              },
+              "archived": {
+                "type": "boolean"
+              },
+              "defaultBranch": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "latestRelease": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "githubCreatedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "githubUpdatedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "githubPushedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "latestReleaseAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "metadataRefreshedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "analysis": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "PENDING",
+                      "COMPLETED",
+                      "FAILED",
+                      "DISABLED"
+                    ]
+                  },
+                  "summary": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "purpose": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "mainUseCases": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "abandonmentRisk": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "LOW",
+                      "MEDIUM",
+                      "HIGH",
+                      "UNKNOWN",
+                      null
+                    ]
+                  },
+                  "aiAnalyzedAt": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "status",
+                  "summary",
+                  "purpose",
+                  "mainUseCases",
+                  "abandonmentRisk",
+                  "aiAnalyzedAt"
+                ]
+              },
+              "categories": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "slug": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "slug",
+                    "name"
+                  ]
+                }
+              },
+              "readme": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "languages": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "integer"
+                }
+              }
+            },
+            "required": [
+              "id",
+              "fullName",
+              "owner",
+              "name",
+              "url",
+              "description",
+              "homepage",
+              "primaryLanguage",
+              "license",
+              "topics",
+              "stars",
+              "forks",
+              "openIssues",
+              "archived",
+              "defaultBranch",
+              "latestRelease",
+              "githubCreatedAt",
+              "githubUpdatedAt",
+              "githubPushedAt",
+              "latestReleaseAt",
+              "metadataRefreshedAt",
+              "analysis",
+              "categories",
+              "readme",
+              "languages"
+            ]
+          },
+          "personal": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "NEW",
+                  "TO_REVIEW",
+                  "REVIEWED",
+                  "TESTING",
+                  "INSTALLED",
+                  "USING",
+                  "FAVORITE",
+                  "REJECTED",
+                  "ARCHIVED"
+                ]
+              },
+              "favorite": {
+                "type": "boolean"
+              },
+              "rating": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 1,
+                "maximum": 5
+              },
+              "notes": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "savedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "reviewedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "status",
+              "favorite",
+              "rating",
+              "notes",
+              "savedAt",
+              "reviewedAt",
+              "updatedAt"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "repository",
+          "personal"
+        ]
+      },
+      "PersonalUpdateBody": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "NEW",
+              "TO_REVIEW",
+              "REVIEWED",
+              "TESTING",
+              "INSTALLED",
+              "USING",
+              "FAVORITE",
+              "REJECTED",
+              "ARCHIVED"
+            ]
+          },
+          "favorite": {
+            "type": "boolean"
+          },
+          "rating": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 5
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 4000
+          }
+        }
       }
     },
     "parameters": {}
@@ -942,6 +1278,158 @@
           },
           "422": {
             "description": "Un valor de orden o de filtro fuera del dominio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errors"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errors"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repositories/{id}": {
+      "get": {
+        "summary": "El detalle de mi relación con un repositorio, con README y lenguajes",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mi relación, el repositorio y su README crudo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/UserRepositoryDetail"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errors"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe, o pertenece a otra cuenta: la misma respuesta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errors"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errors"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repositories/{id}/personal": {
+      "patch": {
+        "summary": "Cambiar mi estado, favorito, rating o notas sobre un repositorio",
+        "description": "El cuerpo se valida antes de resolver el id: un valor fuera de rango es 422 aunque el id no exista. La respuesta es la relación releída de la base.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonalUpdateBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mi relación actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/UserRepository"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errors"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe, o pertenece a otra cuenta: la misma respuesta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errors"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Estado fuera de los nueve, rating fuera de 1..5, notas de más de 4000 caracteres, o cuerpo vacío",
             "content": {
               "application/json": {
                 "schema": {

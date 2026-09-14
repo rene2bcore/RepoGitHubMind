@@ -1,4 +1,11 @@
-import { AppError, INTERNAL_ERROR_BODY, ValidationError, zodToErrors, readEnv } from '@rgm/shared'
+import {
+  AppError,
+  INTERNAL_ERROR_BODY,
+  NotFoundError,
+  ValidationError,
+  zodToErrors,
+  readEnv,
+} from '@rgm/shared'
 import type { z } from 'zod'
 
 type Handler<C> = (req: Request, ctx: C) => Promise<Response>
@@ -59,6 +66,18 @@ export function parseQuery<S extends z.ZodType>(req: Request, schema: S): z.outp
   const params = Object.fromEntries(new URL(req.url).searchParams.entries())
   const result = schema.safeParse(params)
   if (!result.success) throw new ValidationError(zodToErrors(result.error))
+  return result.data
+}
+
+/**
+ * Los parámetros de la ruta validados con Zod. Un id con forma inválida es
+ * un 404, indistinguible de uno que no existe: no viene de un campo del
+ * cuerpo, y decir «id mal formado» ya es decir algo (specs/library · «Id de
+ * otra cuenta»).
+ */
+export function parseParams<S extends z.ZodType>(params: unknown, schema: S): z.output<S> {
+  const result = schema.safeParse(params)
+  if (!result.success) throw new NotFoundError()
   return result.data
 }
 

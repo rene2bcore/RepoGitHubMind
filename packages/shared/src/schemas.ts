@@ -133,6 +133,17 @@ export const userRepositorySchema = z.object({
 })
 export type UserRepository = z.infer<typeof userRepositorySchema>
 
+/** El detalle añade lo pesado: README en Markdown crudo y lenguajes por bytes. */
+export const userRepositoryDetailSchema = z.object({
+  id: z.uuid(),
+  repository: repositorySchema.extend({
+    readme: z.string().nullable(),
+    languages: z.record(z.string(), z.number().int()),
+  }),
+  personal: personalSchema,
+})
+export type UserRepositoryDetail = z.infer<typeof userRepositoryDetailSchema>
+
 export const listMetaSchema = z.object({
   total: z.number().int(),
   page: z.number().int(),
