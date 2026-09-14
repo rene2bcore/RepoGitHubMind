@@ -21,12 +21,14 @@ export const EMBEDDING_DIMENSIONS = 1536
 
 /**
  * Similitud de coseno mínima para que un repositorio entre en la búsqueda por
- * su parte semántica. Depende del modelo, no del producto: calibrada con
- * `openai/text-embedding-3-small` el 2026-09-14 (docs/ai-architecture.md ·
- * «Embeddings»). Otro modelo en `AI_MODEL_EMBEDDING` obliga a revisarla.
+ * su parte semántica. Depende del modelo, no del producto: medida con
+ * `openai/text-embedding-3-small` el 2026-09-14 sobre cuatro consultas y
+ * tres repositorios, las relevantes dieron de 0,35 a 0,65 y las que no, de
+ * 0,17 a 0,30 (docs/ai-architecture.md · «Embeddings»). Otro modelo en
+ * `AI_MODEL_EMBEDDING` obliga a medirla otra vez.
  */
 export const DEFAULT_MIN_SIMILARITY = {
-  openrouter: 0.25,
+  openrouter: 0.32,
 } as const
 
 export type ProviderName = keyof typeof DEFAULT_ANALYSIS_MODEL
