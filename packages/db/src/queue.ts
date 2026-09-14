@@ -18,7 +18,7 @@ export async function enqueueJob(
   type: JobType,
   repositoryId: string | null,
   payload: Record<string, unknown> = {},
-  db: Database = getDb(),
+  db: Pick<Database, 'insert'> = getDb(),
 ): Promise<{ enqueued: boolean }> {
   const rows = await db
     .insert(backgroundJobs)

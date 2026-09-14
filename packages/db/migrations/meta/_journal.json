@@ -22,6 +22,27 @@
       "when": 1789415898941,
       "tag": "0002_loud_lethal_legion",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789422599488,
+      "tag": "0003_pgvector_extension",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789422649235,
+      "tag": "0004_search_index",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1789423251427,
+      "tag": "0005_search_backfill",
+      "breakpoints": true
     }
   ]
 }

@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import {
   bigint,
   boolean,
+  customType,
   index,
   integer,
   jsonb,
@@ -14,6 +15,7 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
+  vector,
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core'
 
@@ -115,10 +117,19 @@ const textArray = (name: string) =>
     .notNull()
     .default(sql`'{}'::text[]`)
 
+/** Drizzle no trae `tsvector`; la columna solo se escribe y se consulta con SQL. */
+const tsvector = customType<{ data: string }>({ dataType: () => 'tsvector' })
+
 /**
  * `Repository` es global: una fila por repositorio de GitHub aunque lo
  * guarden mil cuentas (ADR-0008). El identificador estable es el id de
  * GitHub; `full_name` va en minúsculas porque GitHub no distingue mayúsculas.
+ *
+ * `search_vector` es el documento léxico de la búsqueda (H5). No es una
+ * columna generada: mezcla el resumen, las categorías y los tags, que viven
+ * en otras tablas. Lo escribe `refreshSearchVector` (`packages/search`) al
+ * guardar el repositorio y al completar su análisis. Nunca lleva datos de
+ * `user_repositories`.
  */
 export const repositories = pgTable(
   'repositories',
@@ -148,6 +159,7 @@ export const repositories = pgTable(
     githubPushedAt: timestamp('github_pushed_at', { withTimezone: true }),
     latestReleaseAt: timestamp('latest_release_at', { withTimezone: true }),
     metadataRefreshedAt: timestamp('metadata_refreshed_at', { withTimezone: true }).notNull(),
+    searchVector: tsvector('search_vector'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -158,8 +170,28 @@ export const repositories = pgTable(
     index('repositories_stars_idx').on(t.stars),
     index('repositories_language_idx').on(t.primaryLanguage),
     index('repositories_license_idx').on(t.license),
+    index('repositories_search_vector_idx').using('gin', t.searchVector),
   ],
 )
+
+/**
+ * La representación semántica de un repositorio global, una por repositorio
+ * (specs/search · «Qué se vectoriza»). `source_hash` es el SHA-256 del texto
+ * vectorizado: si el texto y el modelo no cambian, no se vuelve a pedir.
+ * La dimensión es la de PA-3 (`EMBEDDING_DIMENSIONS` en `packages/ai`);
+ * cambiar de modelo obliga a revectorizar, y una dimensión distinta la
+ * rechaza la propia columna. Sin índice HNSW a propósito: con cientos de
+ * repositorios el escaneo secuencial basta (docs/data-model.md, §69).
+ */
+export const repositoryEmbeddings = pgTable('repository_embeddings', {
+  repositoryId: uuid('repository_id')
+    .primaryKey()
+    .references(() => repositories.id, { onDelete: 'cascade' }),
+  embedding: vector('embedding', { dimensions: 1536 }).notNull(),
+  model: text('model').notNull(),
+  sourceHash: text('source_hash').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
 
 /** Un análisis vigente por repositorio, reutilizado por todas las cuentas (ADR-0009). */
 export const repositoryAnalyses = pgTable('repository_analyses', {
