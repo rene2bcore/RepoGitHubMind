@@ -1,0 +1,27 @@
+# RepoGitHubMind · desarrollo local.
+#
+# `postgres` crea dos bases: `repogithubmind` (desarrollo) y
+# `repogithubmind_test` (pruebas). La suite elige la segunda por construcción
+# (ADR-0003). `web` y `worker` llegan con el perfil `prod` en la Entrega final;
+# en desarrollo corren fuera de Docker con `pnpm dev`.
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: rgm-postgres
+    environment:
+      POSTGRES_USER: rgm
+      POSTGRES_PASSWORD: rgm
+      POSTGRES_DB: repogithubmind
+    ports:
+      - '5434:5432'
+    volumes:
+      - rgm-postgres:/var/lib/postgresql/data
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U rgm -d repogithubmind']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  rgm-postgres:

@@ -40,10 +40,10 @@ Se revisa **una sola unidad de trabajo**: si la rama de otro PR abierto es ances
 
 ### De dónde sale el gasto
 
-| Secreto | De dónde sale | Contrapartida |
-|---|---|---|
-| `CLAUDE_CODE_OAUTH_TOKEN` | `claude setup-token`, contra la suscripción | No hay factura por token. **Pero el gasto sale de la misma cuota que usas para trabajar** |
-| `ANTHROPIC_API_KEY` | Consola de Anthropic | Se factura aparte y no toca la cuota personal. Es lo correcto el día que esto deje de ser un proyecto de una persona |
+| Secreto                   | De dónde sale                               | Contrapartida                                                                                                        |
+| ------------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `CLAUDE_CODE_OAUTH_TOKEN` | `claude setup-token`, contra la suscripción | No hay factura por token. **Pero el gasto sale de la misma cuota que usas para trabajar**                            |
+| `ANTHROPIC_API_KEY`       | Consola de Anthropic                        | Se factura aparte y no toca la cuota personal. Es lo correcto el día que esto deje de ser un proyecto de una persona |
 
 Cruzarlas falla en la primera llamada, sin gastar nada y sin decir por qué. OpenRouter, Cline o cualquier otro proveedor **no sirven**: el CLI autentica contra Anthropic, Bedrock, Vertex o Foundry, y nada más.
 
@@ -71,9 +71,9 @@ El revisor no ordena por «criticidad»: ese es el criterio que inventa quien no
 
 Una sola métrica: **cuántos hallazgos acaban en un cambio de código.** No cuántos produce.
 
-| Ejecución | Qué encontró | ¿Acabó en código? |
-|---|---|---|
-| Pendiente: se plantará el primer defecto en la Entrega 2, cuando exista código que contradiga un escenario | | |
+| Ejecución                                                                                                  | Qué encontró | ¿Acabó en código? |
+| ---------------------------------------------------------------------------------------------------------- | ------------ | ----------------- |
+| Pendiente: se plantará el primer defecto en la Entrega 2, cuando exista código que contradiga un escenario |              |                   |
 
 ## Estado: lo que se ha visto y lo que no
 
@@ -85,10 +85,10 @@ Por R-14, esta comprobación no cuenta hasta verla morder. El procedimiento:
 4. Poner un valor inválido en el secreto y ver el job en **rojo** con `401`. Comprobar antes con `gh secret list` que el cambio se aplicó.
 5. Volver a poner el token real y ver el verde **con informe**.
 
-| Qué | Visto |
-|---|---|
-| La puerta omite en verde sin credencial | No aplica: la credencial se puso el 2026-09-14 antes del primer push. Sí se vio la otra puerta: en `push` sin PR abierto, verde con «la rama no tiene PR abierto» (run `34818446587`) |
-| El revisor nombra un defecto plantado | Pendiente, Entrega 2 |
-| Credencial inválida sale en rojo | Pendiente |
-| El informe llega al PR | Visto el 2026-09-14 en el PR #1, run `34818658486`: comentario publicado con «Graves: Ninguno. Menores: Ninguno» |
-| `--disallowed-tools` acota de verdad al revisor | No se ha visto: el revisor nunca ha intentado usar una herramienta negada. La defensa que sí está en pie es que el diff se entrega en un fichero |
+| Qué                                             | Visto                                                                                                                                                                                 |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| La puerta omite en verde sin credencial         | No aplica: la credencial se puso el 2026-09-14 antes del primer push. Sí se vio la otra puerta: en `push` sin PR abierto, verde con «la rama no tiene PR abierto» (run `34818446587`) |
+| El revisor nombra un defecto plantado           | Pendiente, Entrega 2                                                                                                                                                                  |
+| Credencial inválida sale en rojo                | Pendiente                                                                                                                                                                             |
+| El informe llega al PR                          | Visto el 2026-09-14 en el PR #1, run `34818658486`: comentario publicado con «Graves: Ninguno. Menores: Ninguno»                                                                      |
+| `--disallowed-tools` acota de verdad al revisor | No se ha visto: el revisor nunca ha intentado usar una herramienta negada. La defensa que sí está en pie es que el diff se entrega en un fichero                                      |

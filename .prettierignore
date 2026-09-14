@@ -1,0 +1,13 @@
+node_modules
+.next
+dist
+build
+coverage
+pnpm-lock.yaml
+core-harness
+packages/db/migrations
+docs/api/openapi.json
+docs/prompts/00-prompt-maestro.md
+LICENSE
+apps/web/test-results
+apps/web/playwright-report

@@ -72,8 +72,10 @@ for (const sha of shas) {
 if (sinPrueba.length) {
   console.error(
     `\n${sinPrueba.length} de ${arreglos} commits fix: no dejan prueba ni dicen por qué (R-08).` +
-      '\nSi la prueba no es un fichero, añade al mensaje una línea «Sin-prueba: <motivo>».'
+      '\nSi la prueba no es un fichero, añade al mensaje una línea «Sin-prueba: <motivo>».',
   )
   process.exit(1)
 }
-console.log(`\n${arreglos} commits fix: en ${shas.length} revisados, todos con prueba o con motivo.`)
+console.log(
+  `\n${arreglos} commits fix: en ${shas.length} revisados, todos con prueba o con motivo.`,
+)

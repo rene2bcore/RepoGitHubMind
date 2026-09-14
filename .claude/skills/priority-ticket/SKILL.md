@@ -2,6 +2,7 @@
 name: priority-ticket
 description: Trae el ticket de mayor prioridad asignado al usuario logeado en Jira (vía MCP) y arranca el trabajo sobre él. Usar al empezar una tarea nueva.
 ---
+
 # Priority ticket
 
 Proyecto de Jira: `RGM`.

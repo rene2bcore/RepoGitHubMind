@@ -157,7 +157,7 @@ const CATALOGO = [
     id: 'rutas-documentadas',
     que: 'una ruta desaparece de la tabla de CLAUDE.md sin salir del contrato',
     fichero: 'CLAUDE.md',
-    cambios: [['| GET | `/api/v1/search` | sí |\n', '']],
+    cambios: [['| GET    | `/api/v1/auth/me`       | sí   |\n', '']],
     muerden: [[VERIFICADOR, 'La tabla de rutas de CLAUDE.md corresponde con el contrato']],
   },
   {
@@ -166,45 +166,51 @@ const CATALOGO = [
     fichero: 'docs/api/openapi.json',
     cambios: [
       [
-        '"/api/v1/search": {\n      "get": {\n        "summary": "Búsqueda híbrida en lenguaje natural con filtros",',
-        '"/api/v1/search": {\n      "get": {\n        "security": [],\n        "summary": "Búsqueda híbrida en lenguaje natural con filtros",',
+        '"/api/v1/auth/me": {\n      "get": {\n        "summary": "La cuenta de la sesión presentada",',
+        '"/api/v1/auth/me": {\n      "get": {\n        "security": [],\n        "summary": "La cuenta de la sesión presentada",',
       ],
     ],
-    muerden: [[VERIFICADOR, 'El contrato no repite ningún parámetro ni deja sin seguridad una operación protegida']],
+    muerden: [
+      [
+        VERIFICADOR,
+        'El contrato no repite ningún parámetro ni deja sin seguridad una operación protegida',
+      ],
+    ],
   },
-  // La forma para código de producto, a partir de la Entrega 2. Cada una se
-  // descomenta y se ajusta al texto exacto cuando exista el fichero:
-  //
-  // {
-  //   // La vertical del PRD: la única mutación que recorre el flujo principal
-  //   // entero. Sin ella, ninguna comprobación demuestra que el producto se
-  //   // puede demostrar.
-  //   id: 'flujo-principal',
-  //   que: 'la biblioteca deja de ser privada y cada cuenta ve las de todas',
-  //   fichero: 'apps/web/src/modules/library/queries.ts',
-  //   cambios: [['.where(eq(userRepositories.userId, session.user.id))', '']],
-  //   muerden: [
-  //     [pruebas('library'), 'otra cuenta no ve mi estado ni mis notas'],
-  //     [PLAYWRIGHT, 'registrarse, guardar un repositorio, cambiar su estado y encontrarlo buscando'],
-  //   ],
-  // },
-  // {
-  //   id: 'ADR-0003',
-  //   que: 'la suite vuelve a apuntar a la base de desarrollo',
-  //   fichero: 'packages/db/src/client.ts',
-  //   cambios: [["process.env.NODE_ENV === 'test' ? env.DATABASE_URL_TEST : env.DATABASE_URL", 'env.DATABASE_URL']],
-  //   muerden: [[VERIFICADOR, 'Las pruebas no pueden escribir sobre la base de desarrollo']],
-  // },
-  // {
-  //   id: 'ADR-0001',
-  //   que: 'se renombra un endpoint sin regenerar el contrato',
-  //   fichero: 'apps/web/src/app/api/v1/search/route.ts',
-  //   cambios: [["path: '/api/v1/search'", "path: '/api/v1/buscar'"]],
-  //   muerden: [
-  //     [CONTRATO, 'paths./api/v1/buscar'],
-  //     [VERIFICADOR, 'La tabla de rutas de CLAUDE.md corresponde con el contrato'],
-  //   ],
-  // },
+  {
+    id: 'ADR-0003',
+    que: 'la suite vuelve a apuntar a la base de desarrollo',
+    fichero: 'packages/db/src/client.ts',
+    cambios: [
+      [
+        "const url = env.NODE_ENV === 'test' ? env.DATABASE_URL_TEST : env.DATABASE_URL",
+        "const url = env.NODE_ENV === 'test' ? env.DATABASE_URL : env.DATABASE_URL",
+      ],
+    ],
+    muerden: [[VERIFICADOR, 'Las pruebas no pueden escribir sobre la base de desarrollo']],
+  },
+  {
+    id: 'ADR-0004',
+    que: 'un 500 vuelve a salir con el mensaje del error, que en la base es la sentencia SQL',
+    fichero: 'apps/web/src/lib/http.ts',
+    cambios: [['      const debug = readEnv().DEBUG_HTTP_ERRORS\n', '      const debug = true\n']],
+    muerden: [
+      [VERIFICADOR, 'El volcado de depuración va apagado salvo que se encienda'],
+      [pruebas('errores'), 'un 5xx responde la forma cerrada sin el mensaje de la excepción'],
+    ],
+  },
+  {
+    id: 'ADR-0005',
+    que: 'una carrera de altas con el mismo email responde 500 en vez de 422',
+    fichero: 'apps/web/src/modules/auth/service.ts',
+    cambios: [['    if (isUniqueViolation(error)) throw new ValidationError([EMAIL_TAKEN])\n', '']],
+    muerden: [
+      [pruebas('auth'), 'la carrera de altas la para el índice único y responde 422, no 500'],
+    ],
+  },
+  // Con H3 (RGM-4) entra la mutación de la vertical entera, la única que
+  // recorre el flujo principal: la biblioteca deja de ser privada y cada
+  // cuenta ve las de todas. Muerde la prueba con dos cuentas y Playwright.
 ]
 
 // ---------------------------------------------------------------------------
@@ -253,7 +259,9 @@ if (desconocidos.length) {
   process.exit(2)
 }
 if (!elegidas.length) {
-  console.error('El catálogo está vacío. Cada comprobación que añadas necesita su entrada aquí (R-14).')
+  console.error(
+    'El catálogo está vacío. Cada comprobación que añadas necesita su entrada aquí (R-14).',
+  )
   process.exit(1)
 }
 
@@ -316,7 +324,9 @@ for (const m of elegidas) {
         fallos.push(`${m.id}: ${comprobacion.nombre} sigue en verde con la mutación puesta`)
         console.log(`  SOBREVIVE ${comprobacion.nombre}`)
       } else if (!lineas(salida).some((l) => comprobacion.fallo.test(l) && l.includes(motivo))) {
-        fallos.push(`${m.id}: ${comprobacion.nombre} sale en rojo, pero ninguna línea de fallo nombra «${motivo}»`)
+        fallos.push(
+          `${m.id}: ${comprobacion.nombre} sale en rojo, pero ninguna línea de fallo nombra «${motivo}»`,
+        )
         console.log(`  ROJO POR OTRO MOTIVO ${comprobacion.nombre}`)
         volcar(salida)
       } else {
@@ -339,7 +349,7 @@ if (process.env.GITHUB_STEP_SUMMARY) {
     process.env.GITHUB_STEP_SUMMARY,
     fallos.length
       ? `### Mutaciones: ${fallos.length} problemas\n\n${fallos.map((f) => `- ${f}`).join('\n')}\n`
-      : `### Mutaciones: ${elegidas.length} mutaciones, ${total} comprobaciones en rojo por su motivo\n`
+      : `### Mutaciones: ${elegidas.length} mutaciones, ${total} comprobaciones en rojo por su motivo\n`,
   )
 }
 
@@ -347,4 +357,6 @@ if (fallos.length) {
   console.error(`\n${fallos.length} problemas:\n- ${fallos.join('\n- ')}`)
   process.exit(1)
 }
-console.log(`\n${elegidas.length} mutaciones, ${total} comprobaciones en rojo por su motivo, todo restaurado.`)
+console.log(
+  `\n${elegidas.length} mutaciones, ${total} comprobaciones en rojo por su motivo, todo restaurado.`,
+)

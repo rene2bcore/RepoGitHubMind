@@ -17,21 +17,45 @@ const COMPROBACION = resolve(dirname(fileURLToPath(import.meta.url)), 'fix-con-p
 
 const CASOS = [
   { mensaje: 'fix: con su prueba en web', fichero: 'apps/web/src/lib/api.test.ts', pasa: true },
-  { mensaje: 'fix(worker): con su prueba', fichero: 'apps/worker/src/jobs/refresh.spec.ts', pasa: true },
-  { mensaje: 'fix(db): con su prueba en un paquete', fichero: 'packages/db/tests/aislamiento.test.ts', pasa: true },
+  {
+    mensaje: 'fix(worker): con su prueba',
+    fichero: 'apps/worker/src/jobs/refresh.spec.ts',
+    pasa: true,
+  },
+  {
+    mensaje: 'fix(db): con su prueba en un paquete',
+    fichero: 'packages/db/tests/aislamiento.test.ts',
+    pasa: true,
+  },
   { mensaje: 'fix: prueba de navegador', fichero: 'apps/web/e2e/flujo.e2e.ts', pasa: true },
   { mensaje: 'fix: una comprobacion nueva', fichero: 'scripts/verificar-docs.mjs', pasa: true },
   { mensaje: 'fix: una mutacion nueva', fichero: 'scripts/mutaciones.mjs', pasa: true },
   { mensaje: 'fix: sin prueba', fichero: 'apps/web/src/lib/api.ts', pasa: false },
-  { mensaje: 'fix(tasks)!: sin prueba y rompiendo', fichero: 'packages/github/src/provider.ts', pasa: false },
-  { mensaje: 'fix: un helper no es una prueba', fichero: 'apps/web/tests/helpers/api.ts', pasa: false },
-  { mensaje: 'fix: una fixture no es una prueba', fichero: 'apps/web/e2e/fixtures/cuenta.ts', pasa: false },
+  {
+    mensaje: 'fix(tasks)!: sin prueba y rompiendo',
+    fichero: 'packages/github/src/provider.ts',
+    pasa: false,
+  },
+  {
+    mensaje: 'fix: un helper no es una prueba',
+    fichero: 'apps/web/tests/helpers/api.ts',
+    pasa: false,
+  },
+  {
+    mensaje: 'fix: una fixture no es una prueba',
+    fichero: 'apps/web/e2e/fixtures/cuenta.ts',
+    pasa: false,
+  },
   {
     mensaje: 'fix: el workflow\n\nSin-prueba: se vio en rojo y en verde en CI',
     fichero: '.github/workflows/x.yml',
     pasa: true,
   },
-  { mensaje: 'fix: con la excusa vacia\n\nSin-prueba:', fichero: 'apps/web/src/lib/api.ts', pasa: false },
+  {
+    mensaje: 'fix: con la excusa vacia\n\nSin-prueba:',
+    fichero: 'apps/web/src/lib/api.ts',
+    pasa: false,
+  },
   { mensaje: 'feat: no es un arreglo', fichero: 'apps/web/src/lib/api.ts', pasa: true },
   { mensaje: 'docs: fix: no es el asunto', fichero: 'docs/x.md', pasa: true },
 ]
@@ -60,7 +84,7 @@ try {
     if (!bien) fallos++
     const asunto = mensaje.split('\n')[0]
     console.log(
-      `${bien ? 'OK   ' : 'FALLA'} «${asunto}» en ${fichero} · ${paso ? 'pasa' : 'se rechaza'}, se esperaba que ${pasa ? 'pasara' : 'se rechazara'}`
+      `${bien ? 'OK   ' : 'FALLA'} «${asunto}» en ${fichero} · ${paso ? 'pasa' : 'se rechaza'}, se esperaba que ${pasa ? 'pasara' : 'se rechazara'}`,
     )
   }
 } finally {
