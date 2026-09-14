@@ -50,6 +50,9 @@ importers:
       '@rgm/github':
         specifier: workspace:*
         version: link:../../packages/github
+      '@rgm/search':
+        specifier: workspace:*
+        version: link:../../packages/search
       '@rgm/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -123,6 +126,9 @@ importers:
       '@rgm/github':
         specifier: workspace:*
         version: link:../../packages/github
+      '@rgm/search':
+        specifier: workspace:*
+        version: link:../../packages/search
       '@rgm/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -209,6 +215,31 @@ importers:
       '@rgm/shared':
         specifier: workspace:*
         version: link:../shared
+    devDependencies:
+      '@rgm/config':
+        specifier: workspace:*
+        version: link:../config
+      '@types/node':
+        specifier: ^24.13.2
+        version: 24.13.4
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+
+  packages/search:
+    dependencies:
+      '@rgm/ai':
+        specifier: workspace:*
+        version: link:../ai
+      '@rgm/db':
+        specifier: workspace:*
+        version: link:../db
+      '@rgm/shared':
+        specifier: workspace:*
+        version: link:../shared
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(postgres@3.4.9)
     devDependencies:
       '@rgm/config':
         specifier: workspace:*

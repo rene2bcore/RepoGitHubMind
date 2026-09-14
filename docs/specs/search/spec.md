@@ -62,7 +62,7 @@ El sistema SHALL admitir `scope=library`, que busca en mi biblioteca (repositori
 
 ### Requirement: Filtros combinables en la URL
 
-El sistema SHALL combinar los filtros de categoría, lenguaje, licencia, estrellas mínimas, estado y favorito con la consulta, y la interfaz SHALL llevarlos en la URL para que una búsqueda se pueda compartir y el botón «atrás» la deshaga. Un filtro fuera del dominio SHALL rechazarse con `422`.
+El sistema SHALL combinar los filtros de categoría, lenguaje, licencia, estrellas mínimas, estado y favorito con la consulta, y la interfaz SHALL llevarlos en la URL para que una búsqueda se pueda compartir y el botón «atrás» la deshaga. La licencia SHALL admitir varias a la vez, y cualquiera de ellas vale. Un filtro fuera del dominio, un parámetro repetido, o `status` o `favorite` con `scope=global`, donde no filtrarían nada, SHALL rechazarse con `422`.
 
 #### Scenario: Combinación
 

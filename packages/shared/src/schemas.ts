@@ -222,18 +222,99 @@ export type LibraryQuery = z.infer<typeof libraryQuerySchema>
 export const analysisRequestSchema = z.object({ force: z.boolean().optional() }).strict()
 export type AnalysisRequestBody = z.infer<typeof analysisRequestSchema>
 
-export const searchQuerySchema = z.object({
-  q: z.string().trim().min(2, 'Escribe al menos dos caracteres').max(200),
-  scope: z.enum(['library', 'global']).default('library'),
-  category: z.string().trim().min(1).max(120).optional(),
-  language: z.string().trim().min(1).max(60).optional(),
-  license: z.string().trim().min(1).max(60).optional(),
-  minStars: z.coerce.number().int().min(0).optional(),
-  status: z.enum(PERSONAL_STATUSES).optional(),
-  favorite: booleanParam,
-  limit: z.coerce.number().int().min(1).max(50).default(20),
-})
+/**
+ * Dónde busca la búsqueda (specs/search · «Ámbitos y privacidad»): `library`,
+ * mi biblioteca con mis datos; `global`, el corpus de repositorios conocidos,
+ * sin datos personales de nadie.
+ */
+export const SEARCH_SCOPES = ['library', 'global'] as const
+export type SearchScopeName = (typeof SEARCH_SCOPES)[number]
+
+/** Los campos del documento léxico de un repositorio, que la explicación nombra. */
+export const SEARCH_FIELDS = [
+  'name',
+  'description',
+  'topics',
+  'categories',
+  'summary',
+  'purpose',
+  'useCases',
+  'tags',
+] as const
+export type SearchField = (typeof SEARCH_FIELDS)[number]
+
+/** `hybrid`: léxica y semántica fusionadas. `lexical`: sin embedding de la consulta (IA apagada o caída). */
+export const SEARCH_MODES = ['hybrid', 'lexical'] as const
+
+const LIBRARY_ONLY = 'Solo filtra en tu biblioteca: usa scope=library'
+
+/**
+ * Los parámetros de la búsqueda. `strict`, como la lista: un parámetro que no
+ * está aquí es 422. `license` admite varias separadas por comas
+ * («MIT,Apache-2.0») y cualquiera de ellas vale (specs/search ·
+ * «Combinación»). `status` y `favorite` son datos personales y solo filtran
+ * en `library`: en `global` no filtrarían nada, y un filtro que no filtra no
+ * se acepta (H-08). Una categoría con forma válida que el catálogo no conoce
+ * es 422 también, pero eso lo decide el servicio, que lee el catálogo.
+ */
+export const searchQuerySchema = z
+  .object({
+    q: z.string().trim().min(2, 'Escribe al menos dos caracteres').max(200),
+    scope: z.enum(SEARCH_SCOPES).default('library'),
+    category: z
+      .string()
+      .trim()
+      .regex(/^[a-z0-9-]{1,60}$/, 'No es el slug de una categoría')
+      .optional(),
+    language: z.string().trim().min(1).max(60).optional(),
+    license: z
+      .string()
+      .trim()
+      .regex(/^[^,]{1,60}(,[^,]{1,60}){0,9}$/, 'Hasta diez licencias separadas por comas')
+      .transform((v) => [...new Set(v.split(',').map((l) => l.trim()))].filter(Boolean))
+      .optional(),
+    minStars: z.coerce.number().int().min(0).optional(),
+    status: z.enum(PERSONAL_STATUSES).optional(),
+    favorite: booleanParam,
+    limit: z.coerce.number().int().min(1).max(50).default(20),
+  })
+  .strict()
+  .superRefine((v, ctx) => {
+    if (v.scope !== 'global') return
+    for (const field of ['status', 'favorite'] as const) {
+      if (v[field] !== undefined)
+        ctx.addIssue({ code: 'custom', path: [field], message: LIBRARY_ONLY })
+    }
+  })
 export type SearchQuery = z.infer<typeof searchQuerySchema>
+
+/**
+ * Un resultado de búsqueda. `repository` es el repositorio global con su
+ * análisis y sus categorías. `id` y `personal` son **mi** relación con él, y
+ * los dos son null si no está en mi biblioteca: nunca traen datos de otra
+ * cuenta ni dicen quién más lo guardó (specs/search · «Buscar en el corpus
+ * global»). `match` explica por qué aparece: los campos y las palabras en que
+ * coincide, si se parece por significado, y el «Por qué» en una línea.
+ */
+export const searchResultSchema = z.object({
+  id: z.uuid().nullable(),
+  repository: repositorySchema,
+  personal: personalSchema.nullable(),
+  match: z.object({
+    fields: z.array(z.enum(SEARCH_FIELDS)),
+    terms: z.array(z.string()),
+    semantic: z.boolean(),
+    reason: z.string(),
+  }),
+})
+export type SearchResult = z.infer<typeof searchResultSchema>
+
+export const searchMetaSchema = z.object({
+  scope: z.enum(SEARCH_SCOPES),
+  mode: z.enum(SEARCH_MODES),
+  total: z.number().int(),
+})
+export type SearchMeta = z.infer<typeof searchMetaSchema>
 
 export const uuidParamSchema = z.object({ id: z.uuid() })
 

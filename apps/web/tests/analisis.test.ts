@@ -51,9 +51,27 @@ describe('análisis de IA', () => {
     const res = await list(jsonRequest(`/api/v1/repositories${qs}`, { cookie }), {})
     return { status: res.status, body: await res.json() }
   }
-  const usos = async () => (await getDb().select().from(aiUsage)).length
+  const usos = async () =>
+    (await getDb().select().from(aiUsage).where(eq(aiUsage.operation, 'ANALYSIS'))).length
   const enCola = () =>
-    getDb().select().from(backgroundJobs).where(eq(backgroundJobs.status, 'QUEUED'))
+    getDb()
+      .select()
+      .from(backgroundJobs)
+      .where(
+        and(eq(backgroundJobs.status, 'QUEUED'), eq(backgroundJobs.type, 'ANALYZE_REPOSITORY')),
+      )
+  /**
+   * Vacía la cola como el worker y devuelve cómo terminó el análisis, o null si
+   * no había ninguno. Completar un análisis encola GENERATE_EMBEDDING (H5), que
+   * aquí se procesa y no se mira: lo prueba apps/worker/tests/embeddings.test.ts.
+   */
+  const analizarCola = async () => {
+    let outcome: string | null = null
+    for (let r = await processNextJob(); r; r = await processNextJob()) {
+      if (r.job.type === 'ANALYZE_REPOSITORY') outcome = r.outcome
+    }
+    return outcome
+  }
   const conIA = (activa: boolean) => {
     Object.assign(process.env, { AI_ANALYSIS_ENABLED: String(activa) })
     resetEnvCache()
@@ -80,7 +98,7 @@ describe('análisis de IA', () => {
     const grace = await cuentaConSesion('grace')
     const deAda = await guardar(ada.cookie, 'https://github.com/langchain-ai/langgraph')
     expect(deAda.body.data.repository.analysis.status).toBe('PENDING')
-    expect((await processNextJob())?.outcome).toBe('completed')
+    expect(await analizarCola()).toBe('completed')
     expect(await usos()).toBe(1)
 
     const deGrace = await guardar(grace.cookie, 'https://github.com/langchain-ai/langgraph')
@@ -97,7 +115,7 @@ describe('análisis de IA', () => {
     ])
 
     expect(await enCola()).toHaveLength(0)
-    expect(await processNextJob()).toBeNull()
+    expect(await analizarCola()).toBeNull()
     expect(await usos()).toBe(1)
     expect(ai.requests).toHaveLength(1)
   })
@@ -106,7 +124,7 @@ describe('análisis de IA', () => {
     const ada = await cuentaConSesion('ada')
     const grace = await cuentaConSesion('grace')
     const { body } = await guardar(ada.cookie, 'https://github.com/pgvector/pgvector')
-    await processNextJob()
+    await analizarCola()
     const repositoryId = body.data.repository.id
     const antiguo = new Date('2026-09-01T00:00:00Z')
     await getDb()
@@ -120,7 +138,7 @@ describe('análisis de IA', () => {
       summary: 'Resumen anterior',
     })
     expect(await enCola()).toHaveLength(1)
-    expect((await processNextJob())?.outcome).toBe('completed')
+    expect(await analizarCola()).toBe('completed')
     const [nuevo] = await getDb()
       .select()
       .from(repositoryAnalyses)
@@ -146,7 +164,7 @@ describe('análisis de IA', () => {
     const ada = await cuentaConSesion('ada')
     const { body } = await guardar(ada.cookie, 'https://github.com/antirez/kilo')
     const id = body.data.id
-    expect((await processNextJob())?.outcome).toBe('failed')
+    expect(await analizarCola()).toBe('failed')
 
     const biblioteca = await listar(ada.cookie)
     expect(biblioteca.status).toBe(200)
@@ -162,7 +180,7 @@ describe('análisis de IA', () => {
     const reintento = await pedir(ada.cookie, id)
     expect(reintento.status).toBe(202)
     expect(reintento.body.data.repository.analysis.status).toBe('PENDING')
-    expect((await processNextJob())?.outcome).toBe('completed')
+    expect(await analizarCola()).toBe('completed')
 
     const vigente = await pedir(ada.cookie, id)
     expect(vigente.status).toBe(200)
@@ -173,7 +191,7 @@ describe('análisis de IA', () => {
     expect(forzado.status).toBe(202)
     const [trabajo] = await enCola()
     expect(trabajo!.payload).toEqual({ force: true })
-    expect((await processNextJob())?.outcome).toBe('completed')
+    expect(await analizarCola()).toBe('completed')
     expect(ai.requests).toHaveLength(3)
     expect(await usos()).toBe(4)
   })
@@ -181,7 +199,7 @@ describe('análisis de IA', () => {
   it('forzar mientras un trabajo ya está en curso no se pierde: ese trabajo rehace el análisis', async () => {
     const ada = await cuentaConSesion('ada')
     const { body } = await guardar(ada.cookie, 'https://github.com/pgvector/pgvector')
-    expect((await processNextJob())?.outcome).toBe('completed')
+    expect(await analizarCola()).toBe('completed')
     const repositoryId = body.data.repository.id
 
     // Un trabajo sobre el análisis vigente, tomado por el worker y todavía sin decidir.
@@ -231,7 +249,7 @@ describe('análisis de IA', () => {
     await guardar(ada.cookie, 'https://github.com/pgvector/pgvector')
     await guardar(ada.cookie, 'https://github.com/langchain-ai/langgraph')
     await guardar(ada.cookie, 'https://github.com/antirez/kilo')
-    while (await processNextJob());
+    await analizarCola()
 
     const nombres = async (cookie: string, qs: string) =>
       ((await listar(cookie, qs)).body.data as UserRepository[]).map((i) => i.repository.fullName)
@@ -291,7 +309,7 @@ describe('análisis de IA', () => {
       .update(repositories)
       .set({ archived: true })
       .where(and(eq(repositories.id, body.data.repository.id)))
-    await processNextJob()
+    await analizarCola()
 
     const res = await detail(
       jsonRequest(`/api/v1/repositories/${body.data.id}`, { cookie: ada.cookie }),

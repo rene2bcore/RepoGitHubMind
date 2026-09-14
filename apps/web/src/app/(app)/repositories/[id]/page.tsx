@@ -106,7 +106,7 @@ export default async function RepositoryPage({ params }: { params: Promise<{ id:
       </header>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="flex flex-col gap-4 md:col-span-2">
+        <div className="flex min-w-0 flex-col gap-4 md:col-span-2">
           <Card>
             <h2 className="mb-2 text-lg font-medium">Resumen</h2>
             <AnalysisPoller pending={a.status === 'PENDING'} />
@@ -177,7 +177,7 @@ export default async function RepositoryPage({ params }: { params: Promise<{ id:
           ) : null}
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex min-w-0 flex-col gap-4">
           <Card>
             <h2 className="mb-2 text-lg font-medium">Mis datos</h2>
             <PersonalEditor id={item.id} personal={personal} />

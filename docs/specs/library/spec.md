@@ -67,7 +67,7 @@ El sistema SHALL admitir un rating entero de 1 a 5 o nulo, y notas de hasta 4000
 
 ### Requirement: Lista con orden y filtros
 
-El sistema SHALL devolver la biblioteca paginada, ordenable por `savedAt`, `pushedAt`, `stars`, `name` o `rating`, y filtrable por estado, favorito, lenguaje, licencia, categoría y estrellas mínimas. Un valor de orden o de filtro fuera del dominio SHALL rechazarse con `422`, no ignorarse.
+El sistema SHALL devolver la biblioteca paginada, ordenable por `savedAt`, `pushedAt`, `stars`, `name` o `rating`, y filtrable por estado, favorito, lenguaje, licencia, categoría y estrellas mínimas. Un valor de orden o de filtro fuera del dominio, o un parámetro repetido, SHALL rechazarse con `422`, no ignorarse.
 
 #### Scenario: Filtro por estado
 

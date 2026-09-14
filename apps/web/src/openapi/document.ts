@@ -8,6 +8,9 @@ import {
   personalUpdateSchema,
   registerSchema,
   saveRepositorySchema,
+  searchMetaSchema,
+  searchQuerySchema,
+  searchResultSchema,
   userRepositoryDetailSchema,
   userRepositorySchema,
   uuidParamSchema,
@@ -156,7 +159,7 @@ export function buildDocument() {
       },
       401: errorResponse('Sin sesión'),
       422: errorResponse(
-        'Un valor de orden o de filtro fuera del dominio, un parámetro desconocido, o una categoría que el catálogo no conoce',
+        'Un valor de orden o de filtro fuera del dominio, un parámetro desconocido o repetido, o una categoría que el catálogo no conoce',
       ),
       500: errorResponse('Error interno del servidor'),
     },
@@ -219,12 +222,41 @@ export function buildDocument() {
     },
   })
 
+  const searchResult = registry.register('SearchResult', searchResultSchema)
+  const searchMeta = registry.register('SearchMeta', searchMetaSchema)
+
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/search',
+    summary: 'Búsqueda híbrida en lenguaje natural, en mi biblioteca o en el corpus global',
+    description:
+      'Combina la búsqueda de texto completo de PostgreSQL con la similitud de coseno de pgvector sobre el embedding de cada repositorio, fusionadas con Reciprocal Rank Fusion. Cada resultado explica por qué aparece. `scope=library` busca en mi biblioteca; `scope=global`, en todos los repositorios conocidos. En los dos ámbitos, `id` y `personal` son solo los de la cuenta de la sesión, o null si el repositorio no está en su biblioteca: nunca datos de otra cuenta ni quién lo guardó. Sin embedding de la consulta (IA apagada o caída) responde igual con la parte léxica y `meta.mode` es `lexical`.',
+    request: { query: searchQuerySchema },
+    responses: {
+      200: {
+        description:
+          'Resultados ordenados por RRF, como mucho `limit`. Sin coincidencias es 200 con data []',
+        content: {
+          'application/json': {
+            schema: z.object({ data: z.array(searchResult), meta: searchMeta }),
+          },
+        },
+      },
+      401: errorResponse('Sin sesión'),
+      422: errorResponse(
+        '`q` con menos de dos caracteres, un filtro fuera del dominio, un parámetro desconocido o repetido, una categoría que el catálogo no conoce, o `status` o `favorite` con `scope=global`',
+      ),
+      429: errorResponse('Demasiadas búsquedas desde la cuenta'),
+      500: errorResponse('Error interno del servidor'),
+    },
+  })
+
   const generator = new OpenApiGeneratorV31(registry.definitions)
   return generator.generateDocument({
     openapi: '3.1.0',
     info: {
       title: 'RepoGitHubMind API',
-      version: '0.5.0',
+      version: '0.6.0',
       description:
         'Contrato de los Route Handlers bajo /api/v1, generado desde los esquemas Zod con `pnpm openapi:generate` y vigilado en CI con `pnpm openapi:check` (ADR-0001). Toda respuesta de éxito va envuelta en { data } y toda respuesta de error en { errors: [...] }. Las Server Actions no forman parte del contrato.',
     },

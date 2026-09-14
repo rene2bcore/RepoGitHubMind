@@ -12,9 +12,11 @@ import {
   type AnalysisOutcome,
   type CatalogCategory,
 } from '@rgm/ai'
+import { refreshSearchVector } from '@rgm/search'
 import {
   aiUsage,
   categories,
+  enqueueJob,
   getDb,
   repositories,
   repositoryAnalyses,
@@ -39,7 +41,8 @@ export type AnalysisJobResult = 'disabled' | 'cached' | 'analyzed' | 'missing'
  * - Con un análisis vigente y sin `payload.force`, no hace nada: la caché de
  *   ADR-0009 se comprueba también aquí, no solo al encolar.
  * - Si el proveedor responde, guarda análisis, categorías del catálogo, tags
- *   y una fila de `ai_usage` por llamada, en una transacción.
+ *   y una fila de `ai_usage` por llamada, reescribe `search_vector` y encola
+ *   `GENERATE_EMBEDDING`, todo en una transacción (specs/search).
  * - Si falla, registra las llamadas y relanza para que la cola decida:
  *   backoff si es reintentable y quedan intentos; si no, el análisis queda
  *   `FAILED` con `last_error`. Un análisis completado anterior se conserva
@@ -235,6 +238,11 @@ async function saveAnalysis(
     }
 
     await recordUsage(tx, repositoryId, provider, outcome.calls, unmapped)
+
+    // H5: el resumen, las categorías y los tags nuevos entran en la búsqueda
+    // léxica ya, y el embedding se pide con el texto que acaba de cambiar.
+    await refreshSearchVector(tx, repositoryId)
+    await enqueueJob('GENERATE_EMBEDDING', repositoryId, {}, tx)
   })
 }
 
