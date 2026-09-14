@@ -67,7 +67,12 @@ export const saveRepositorySchema = z.object({
 export type SaveRepositoryBody = z.infer<typeof saveRepositorySchema>
 
 export const ANALYSIS_STATUSES = ['PENDING', 'COMPLETED', 'FAILED', 'DISABLED'] as const
+export type AnalysisStatus = (typeof ANALYSIS_STATUSES)[number]
 export const ABANDONMENT_RISKS = ['LOW', 'MEDIUM', 'HIGH', 'UNKNOWN'] as const
+export type AbandonmentRisk = (typeof ABANDONMENT_RISKS)[number]
+/** De dónde sale la valoración de abandono: la heurística manda cuando tiene datos. */
+export const ABANDONMENT_RISK_SOURCES = ['HEURISTIC', 'AI'] as const
+export type AbandonmentRiskSource = (typeof ABANDONMENT_RISK_SOURCES)[number]
 
 /**
  * Lo que sale por la API de un repositorio global y de la relación privada.
