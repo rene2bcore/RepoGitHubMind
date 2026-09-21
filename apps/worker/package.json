@@ -15,13 +15,13 @@
     "@rgm/github": "workspace:*",
     "@rgm/search": "workspace:*",
     "@rgm/shared": "workspace:*",
-    "dotenv": "^17.4.2",
+    "dotenv": "^18.0.0",
     "drizzle-orm": "^0.45.2"
   },
   "devDependencies": {
     "@rgm/config": "workspace:*",
-    "@types/node": "^24.13.2",
+    "@types/node": "^26.6.1",
     "tsx": "^4.23.13",
-    "typescript": "~6.0.3"
+    "typescript": "~7.0.2"
   }
 }
