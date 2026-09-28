@@ -21,9 +21,9 @@
     "@rgm/search": "workspace:*",
     "@rgm/shared": "workspace:*",
     "bcryptjs": "^3.0.3",
-    "drizzle-orm": "^0.45.2",
-    "lucide-react": "^1.46.0",
-    "next": "^16.3.5",
+    "drizzle-orm": "^0.45.3",
+    "lucide-react": "^1.48.0",
+    "next": "^16.3.6",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-markdown": "10.1.0",
@@ -34,12 +34,12 @@
     "@playwright/test": "^1.63.0",
     "@rgm/config": "workspace:*",
     "@tailwindcss/postcss": "^4.3.3",
-    "@types/node": "^24.13.2",
+    "@types/node": "^26.6.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "dotenv": "^17.4.2",
+    "dotenv": "^18.0.3",
     "tailwindcss": "^4.3.3",
-    "tsx": "^4.23.13",
-    "typescript": "~6.0.3"
+    "tsx": "^4.23.15",
+    "typescript": "~7.0.2"
   }
 }
