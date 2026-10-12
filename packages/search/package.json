@@ -14,11 +14,11 @@
     "@rgm/ai": "workspace:*",
     "@rgm/db": "workspace:*",
     "@rgm/shared": "workspace:*",
-    "drizzle-orm": "^0.45.2"
+    "drizzle-orm": "^0.45.4"
   },
   "devDependencies": {
     "@rgm/config": "workspace:*",
-    "@types/node": "^24.13.2",
-    "typescript": "~6.0.3"
+    "@types/node": "^26.6.4",
+    "typescript": "~7.0.2"
   }
 }
