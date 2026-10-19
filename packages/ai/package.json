@@ -12,12 +12,12 @@
   },
   "dependencies": {
     "@rgm/shared": "workspace:*",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@rgm/config": "workspace:*",
     "@rgm/db": "workspace:*",
-    "@types/node": "^24.13.2",
-    "typescript": "~6.0.3"
+    "@types/node": "^26.6.5",
+    "typescript": "~7.0.2"
   }
 }
